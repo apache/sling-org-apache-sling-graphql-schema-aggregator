@@ -26,15 +26,13 @@ import org.osgi.framework.Bundle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** {@PartialSchemaProvider} build out of a Bundle entry, which must be a valid
- *  partial schema file.
- */
-class BundleEntryPartialProvider extends PartialReader implements Comparable<BundleEntryPartialProvider> {
-    private static final Logger log = LoggerFactory.getLogger(BundleEntryPartialProvider.class.getName());
+/** A {@link Partial} built out of a Bundle entry using a {@link PartialReader} */
+class BundleEntryPartial extends PartialReader implements Comparable<BundleEntryPartial> {
+    private static final Logger log = LoggerFactory.getLogger(BundleEntryPartial.class.getName());
     private final String key;
     private final long bundleId;
 
-    private BundleEntryPartialProvider(Bundle b, URL bundleEntry) throws IOException {
+    private BundleEntryPartial(Bundle b, URL bundleEntry) throws IOException {
         super(getPartialName(bundleEntry), new URLReaderSupplier(bundleEntry));
         this.bundleId = b.getBundleId();
         this.key = String.format("%s(%d):%s", b.getSymbolicName(), b.getBundleId(), bundleEntry.toString());
@@ -51,20 +49,20 @@ class BundleEntryPartialProvider extends PartialReader implements Comparable<Bun
     /** @return a BundleEntryPartialProvider for the entryPath in
      *  the supplied Bundle, or null if none can be built.
       */
-    static BundleEntryPartialProvider forBundle(Bundle b, String entryPath) throws IOException {
+    static BundleEntryPartial forBundle(Bundle b, String entryPath) throws IOException {
         final URL entry = b.getEntry(entryPath);
         if(entry == null) {
             log.info("Entry {} not found for bundle {}", entryPath, b.getSymbolicName());
             return null;
         } else {
-            return new BundleEntryPartialProvider(b, entry);
+            return new BundleEntryPartial(b, entry);
         }
     }
 
     @Override
     public boolean equals(Object other) {
-        if(other instanceof BundleEntryPartialProvider) {
-            return ((BundleEntryPartialProvider)other).key.equals(key);
+        if(other instanceof BundleEntryPartial) {
+            return ((BundleEntryPartial)other).key.equals(key);
         }
         return false;
     }
@@ -83,7 +81,7 @@ class BundleEntryPartialProvider extends PartialReader implements Comparable<Bun
     }
 
     @Override
-    public int compareTo(BundleEntryPartialProvider o) {
+    public int compareTo(BundleEntryPartial o) {
         return getName().compareTo(o.getName());
     }
 }

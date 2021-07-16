@@ -55,7 +55,7 @@ public class ProviderBundleTracker implements BundleTrackerCustomizer<Object> {
     public static final String SCHEMA_PATH_HEADER = "Sling-GraphQL-Schema";
 
     private final Logger log = LoggerFactory.getLogger(getClass().getName());
-    private final Map<String, BundleEntryPartialProvider> schemaProviders = new ConcurrentHashMap<>();
+    private final Map<String, BundleEntryPartial> schemaProviders = new ConcurrentHashMap<>();
 
     private BundleContext bundleContext;
 
@@ -82,7 +82,7 @@ public class ProviderBundleTracker implements BundleTrackerCustomizer<Object> {
                     while (paths.hasMoreElements()) {
                         final String path = paths.nextElement();
                         try {
-                            addIfNotPresent(BundleEntryPartialProvider.forBundle(bundle, path));
+                            addIfNotPresent(BundleEntryPartial.forBundle(bundle, path));
                         } catch (IOException ioe) {
                             // TODO save errors and refuse to work if any happended?
                             log.error("Error reading partial " + path, ioe);
@@ -94,7 +94,7 @@ public class ProviderBundleTracker implements BundleTrackerCustomizer<Object> {
         return bundle;
     }
 
-    private void addIfNotPresent(BundleEntryPartialProvider a) {
+    private void addIfNotPresent(BundleEntryPartial a) {
         if(a != null) {
             if(schemaProviders.containsKey(a.getName())) {
                 log.warn("Partial provider with name {} already present, new one will be ignored", a.getName());

@@ -25,10 +25,10 @@ import java.net.URL;
 
 import org.junit.Test;
 
-public class BundleEntryPartialProviderTest {
+public class BundleEntryPartialTest {
     @Test
     public void partialName() throws MalformedURLException {
         final URL url = new URL("http://stuff/some/path/the.name.txt");
-        assertEquals("the.name", BundleEntryPartialProvider.getPartialName(url));
+        assertEquals("the.name", BundleEntryPartial.getPartialName(url));
     }
 }
