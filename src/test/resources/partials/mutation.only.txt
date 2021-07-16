@@ -1,0 +1,6 @@
+PARTIAL: Example with a Mutation but no Query
+
+REQUIRES: a.sdl
+
+MUTATION:
+theOnlyMutation : SlingResource

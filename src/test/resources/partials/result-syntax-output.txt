@@ -1,0 +1,46 @@
+# Schema aggregated by DefaultSchemaAggregator
+
+# DefaultSchemaAggregator.source=a.sdl
+directive @fetcher(
+    name : String,
+    options : String = "",
+    source : String = ""
+) on FIELD_DEFINITION
+
+
+type Query {
+
+# DefaultSchemaAggregator.source=c.sdl
+oneSchemaResource : SlingResource @fetcher(name:"test/pipe" source:"$")
+oneSchemaQuery : SlingResourceConnection @connection(for: "SlingResource") @fetcher(name:"test/query")
+
+
+}
+
+type Mutation {
+
+# DefaultSchemaAggregator.source=c.sdl
+someMutation : SlingResource
+}
+
+# DefaultSchemaAggregator.source=a.sdl
+type SlingResource {
+    path: String!
+}
+
+type PageInfo {
+    count: Int
+}
+
+type typeFromA {
+    path : String
+}
+# DefaultSchemaAggregator.source=b.sdl
+type SlingResourceConnection {
+    pageInfo : PageInfo
+}
+
+type typeFromB {
+    path : String
+}
+# End of Schema aggregated from {a.sdl,b.sdl,c.sdl} by DefaultSchemaAggregator

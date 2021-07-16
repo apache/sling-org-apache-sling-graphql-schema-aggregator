@@ -1,0 +1,33 @@
+# Schema aggregated by DefaultSchemaAggregator
+
+# DefaultSchemaAggregator.source=a.sdl
+directive @fetcher(
+    name : String,
+    options : String = "",
+    source : String = ""
+) on FIELD_DEFINITION
+
+
+type Query {
+
+}
+
+type Mutation {
+
+# DefaultSchemaAggregator.source=mutation.only
+theOnlyMutation : SlingResource
+}
+
+# DefaultSchemaAggregator.source=a.sdl
+type SlingResource {
+    path: String!
+}
+
+type PageInfo {
+    count: Int
+}
+
+type typeFromA {
+    path : String
+}
+# End of Schema aggregated from {mutation.only,a.sdl} by DefaultSchemaAggregator

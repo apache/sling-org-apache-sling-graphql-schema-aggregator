@@ -42,6 +42,15 @@ public class DefaultSchemaAggregator implements SchemaAggregator {
     private static final Logger log = LoggerFactory.getLogger(DefaultSchemaAggregator.class.getName());
     public static final int MAX_REQUIREMENTS_RECURSION_LEVEL = 5;
 
+    /** Some sections like Query {} are surround by blocks in
+     *  the output.
+     */
+    enum OutputMode {
+        NO_BLOCK,
+        WITH_BLOCK_IF_NOT_EMPTY,
+        WITH_BLOCK
+    };
+
     @Reference
     private ProviderBundleTracker tracker;
 
@@ -58,8 +67,8 @@ public class DefaultSchemaAggregator implements SchemaAggregator {
         }
     }
 
-    private void copySection(Set<Partial> selected, Partial.SectionName sectionName, boolean inBlock, Writer target) throws IOException {
-        String prefixToWrite = inBlock ? String.format("%ntype %s {%n", capitalize(sectionName)) : null;
+    private void copySection(Set<Partial> selected, Partial.SectionName sectionName, OutputMode mode, Writer target) throws IOException {
+        String prefixToWrite = (mode == OutputMode.NO_BLOCK) ? null : String.format("%ntype %s {%n", capitalize(sectionName));
         boolean anyOutput = false;
         for(Partial p : selected) {
             final Optional<Partial.Section> section = p.getSection(sectionName);
@@ -71,9 +80,12 @@ public class DefaultSchemaAggregator implements SchemaAggregator {
                 }
                 writeSourceInfo(target, p);
                 IOUtils.copy(section.get().getContent(), target);
+            } else if(mode == OutputMode.WITH_BLOCK && prefixToWrite != null) {
+                target.write(prefixToWrite);
+                prefixToWrite = null;
             }
         }
-        if(anyOutput && inBlock) {
+        if( (anyOutput && mode == OutputMode.WITH_BLOCK_IF_NOT_EMPTY) || mode == OutputMode.WITH_BLOCK) {
             target.write(String.format("%n}%n"));
         }
     }
@@ -101,10 +113,10 @@ public class DefaultSchemaAggregator implements SchemaAggregator {
         }
 
         // copy sections that belong in the output SDL
-        copySection(selected, Partial.SectionName.PROLOGUE, false, target);
-        copySection(selected, Partial.SectionName.QUERY, true, target);
-        copySection(selected, Partial.SectionName.MUTATION, true, target);
-        copySection(selected, Partial.SectionName.TYPES, false, target);
+        copySection(selected, Partial.SectionName.PROLOGUE, OutputMode.NO_BLOCK, target);
+        copySection(selected, Partial.SectionName.QUERY, OutputMode.WITH_BLOCK, target);
+        copySection(selected, Partial.SectionName.MUTATION, OutputMode.WITH_BLOCK_IF_NOT_EMPTY, target);
+        copySection(selected, Partial.SectionName.TYPES, OutputMode.NO_BLOCK, target);
 
         final StringBuilder partialNames = new StringBuilder();
         selected.forEach(p -> {

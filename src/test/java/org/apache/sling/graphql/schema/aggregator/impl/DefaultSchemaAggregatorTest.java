@@ -49,6 +49,14 @@ public class DefaultSchemaAggregatorTest {
     private ProviderBundleTracker tracker;
     private BundleContext bundleContext;
 
+    private void assertOutput(String expectedResourceName, String actual) throws IOException {
+        try(InputStream is = getClass().getResourceAsStream(expectedResourceName)) {
+            assertNotNull("Expecting classpath resource to be present:" + expectedResourceName, is);
+            final String expected = IOUtils.toString(is, "UTF-8");
+            assertEquals(expected, actual);
+        }
+    }
+
     @Before
     public void setup() throws Exception {
         dsa = new DefaultSchemaAggregator();
@@ -83,12 +91,7 @@ public class DefaultSchemaAggregatorTest {
         dsa.aggregate(target, "B1a", "B2", "2.z");
         final String sdl = target.toString().trim();
         assertContainsIgnoreCase("schema aggregated by DefaultSchemaAggregator", sdl);
-
-        try(InputStream is = getClass().getResourceAsStream("/several-providers-output.txt")) {
-            assertNotNull("Expecting test resource to be present", is);
-            final String expected = IOUtils.toString(is, "UTF-8");
-            assertEquals(expected, sdl);
-        }
+        assertOutput("/partials/several-providers-output.txt", sdl);
     }
 
     @Test
@@ -102,7 +105,7 @@ public class DefaultSchemaAggregatorTest {
     }
 
     @Test
-    public void parseResult() throws Exception {
+    public void verifyResultSyntax() throws Exception {
         final StringWriter target = new StringWriter();
         tracker.addingBundle(U.mockProviderBundle(bundleContext, "SDL", 1, "a.sdl.txt", "b.sdl.txt", "c.sdl.txt"), null);
 
@@ -125,6 +128,33 @@ public class DefaultSchemaAggregatorTest {
         final Optional<TypeDefinition> mutation = reg.getType("Mutation");
         assertTrue("Expecting Mutation", mutation.isPresent());
         assertTrue(mutation.get().getChildren().toString().contains("someMutation"));
+
+        assertOutput("/partials/result-syntax-output.txt", sdl);
+    }
+
+    @Test
+    public void verifyResultSyntaxMutationOnly() throws Exception {
+        final StringWriter target = new StringWriter();
+        tracker.addingBundle(U.mockProviderBundle(bundleContext, "SDL", 1, "a.sdl.txt", "mutation.only.txt"), null);
+
+        dsa.aggregate(target, "mutation.only");
+
+        // Parse the output with a real SDL parser
+        final String sdl = target.toString();
+        final TypeDefinitionRegistry reg = new SchemaParser().parse(sdl);
+
+        // And make sure it contains what we expect
+        assertTrue(reg.getDirectiveDefinition("fetcher").isPresent());
+        
+        final Optional<TypeDefinition> mutation = reg.getType("Mutation");
+        assertTrue("Expecting Mutation", mutation.isPresent());
+        assertTrue(mutation.get().getChildren().toString().contains("theOnlyMutation"));
+
+        // A Query is required, even if not provided in any partial
+        final Optional<TypeDefinition> query = reg.getType("Query");
+        assertTrue("Expecting Query", query.isPresent());
+
+        assertOutput("/partials/result-syntax-output-mutation-only.txt", sdl);
     }
 
     @Test
