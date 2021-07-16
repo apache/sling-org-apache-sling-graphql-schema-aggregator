@@ -20,24 +20,17 @@ package org.apache.sling.graphql.schema.aggregator.impl;
 
 import static org.junit.Assert.assertEquals;
 
+import org.apache.sling.graphql.schema.aggregator.impl.Partial.SectionName;
 import org.junit.Test;
 
 public class CapitalizeTest {
     @Test
-    public void normalStrings() throws Exception {
-        assertEquals("Voici", DefaultSchemaAggregator.capitalize("voici"));
-        assertEquals("Ou bien", DefaultSchemaAggregator.capitalize("OU BIEN"));
+    public void normalValue() throws Exception {
+        assertEquals("Partial", DefaultSchemaAggregator.capitalize(SectionName.PARTIAL));
    }
 
    @Test
-   public void emptyStrings() throws Exception {
-       assertEquals("", DefaultSchemaAggregator.capitalize(""));
+   public void emptyValue() throws Exception {
        assertEquals(null, DefaultSchemaAggregator.capitalize(null));
   }
-
-  @Test
-  public void shortStrings() throws Exception {
-      assertEquals("A", DefaultSchemaAggregator.capitalize("a"));
-      assertEquals("B", DefaultSchemaAggregator.capitalize("B"));
- }
 }

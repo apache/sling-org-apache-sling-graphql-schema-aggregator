@@ -31,16 +31,25 @@ import java.util.Set;
 interface Partial {
     /** A section in the partial */
     interface Section {
-        String getName();
+        SectionName getName();
         String getDescription();
         Reader getContent() throws IOException;
     }
+
+    enum SectionName {
+        PARTIAL,
+        REQUIRES,
+        PROLOGUE,
+        QUERY,
+        MUTATION,
+        TYPES
+    };
 
     /** The name of this partial */
     String getName();
 
     /** Return a specific section of the partial, by name */
-    Optional<Section> getSection(String name);
+    Optional<Section> getSection(SectionName name);
 
     /** Names of the Partials on which this one depends */
     Set<String> getRequiredPartialNames();

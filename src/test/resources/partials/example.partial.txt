@@ -8,8 +8,8 @@ The contents of the PARTIAL section are not included in the output.
 The text that follows PARTIAL is a description of this partial.
 PARTIAL is the only required section.
 
-REQUIRE: base.scalars, base.schema
-The REQUIRE section indicates partials which are required for this
+REQUIRES: base.scalars, base.schema
+The REQUIRES section indicates partials which are required for this
 one to be valid. Its contents are not included in the output.
 
 PROLOGUE:

@@ -37,11 +37,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.sling.graphql.schema.aggregator.impl.PartialConstants.S_MUTATION;
-import static org.apache.sling.graphql.schema.aggregator.impl.PartialConstants.S_PROLOGUE;
-import static org.apache.sling.graphql.schema.aggregator.impl.PartialConstants.S_QUERY;
-import static org.apache.sling.graphql.schema.aggregator.impl.PartialConstants.S_TYPES;
-
 @Component(service = SchemaAggregator.class)
 public class DefaultSchemaAggregator implements SchemaAggregator {
     private static final Logger log = LoggerFactory.getLogger(DefaultSchemaAggregator.class.getName());
@@ -50,17 +45,20 @@ public class DefaultSchemaAggregator implements SchemaAggregator {
     @Reference
     private ProviderBundleTracker tracker;
 
-    static String capitalize(String s) {
-        if(s == null) {
+    static String capitalize(Partial.SectionName name) {
+        if(name == null) {
             return null;
-        } else if(s.length() >  1) {
+        }
+
+        final String s = name.toString();
+        if(s.length() >  1) {
             return String.format("%s%s", s.substring(0, 1).toUpperCase(), s.substring(1).toLowerCase());
         } else {
             return s.toUpperCase();
         }
     }
 
-    private void copySection(Set<Partial> selected, String sectionName, boolean inBlock, Writer target) throws IOException {
+    private void copySection(Set<Partial> selected, Partial.SectionName sectionName, boolean inBlock, Writer target) throws IOException {
         String prefixToWrite = inBlock ? String.format("%ntype %s {%n", capitalize(sectionName)) : null;
         boolean anyOutput = false;
         for(Partial p : selected) {
@@ -103,10 +101,10 @@ public class DefaultSchemaAggregator implements SchemaAggregator {
         }
 
         // copy sections that belong in the output SDL
-        copySection(selected, S_PROLOGUE, false, target);
-        copySection(selected, S_QUERY, true, target);
-        copySection(selected, S_MUTATION, true, target);
-        copySection(selected, S_TYPES, false, target);
+        copySection(selected, Partial.SectionName.PROLOGUE, false, target);
+        copySection(selected, Partial.SectionName.QUERY, true, target);
+        copySection(selected, Partial.SectionName.MUTATION, true, target);
+        copySection(selected, Partial.SectionName.TYPES, false, target);
 
         final StringBuilder partialNames = new StringBuilder();
         selected.forEach(p -> {

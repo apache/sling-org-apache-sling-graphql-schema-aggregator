@@ -21,7 +21,7 @@ package org.apache.sling.graphql.schema.aggregator.impl;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -31,7 +31,6 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BoundedReader;
 
 /** Reader for the partials format, which parses a partial file and
@@ -43,7 +42,7 @@ class PartialReader implements Partial {
     private static final Pattern SECTION_LINE = Pattern.compile("([A-Z]+) *:(.*)");
     private static final int EOL = '\n';
 
-    private final Map<String, Section> sections = new HashMap<>();
+    private final Map<SectionName, Section> sections = new EnumMap<>(SectionName.class);
     private final String name;
     private final Set<String> requiredPartialNames;
 
@@ -58,12 +57,12 @@ class PartialReader implements Partial {
 
     static class ParsedSection implements Partial.Section {
         private final Supplier<Reader> sectionSource;
-        private final String name;
+        private final SectionName name;
         private final String description;
         private final int startCharIndex;
         private final int endCharIndex;
 
-        ParsedSection(Supplier<Reader> sectionSource, String name, String description, int start, int end) {
+        ParsedSection(Supplier<Reader> sectionSource, SectionName name, String description, int start, int end) {
             this.sectionSource = sectionSource;
             this.name = name;
             this.description = description;
@@ -72,7 +71,7 @@ class PartialReader implements Partial {
         }
 
         @Override
-        public String getName() {
+        public SectionName getName() {
             return name;
         }
 
@@ -92,7 +91,7 @@ class PartialReader implements Partial {
     PartialReader(String name, Supplier<Reader> source) throws IOException {
         this.name = name;
         parse(source);
-        final Partial.Section requirements = sections.get(PartialConstants.S_REQUIRES);
+        final Partial.Section requirements = sections.get(SectionName.REQUIRES);
         if(requirements == null) {
             requiredPartialNames = Collections.emptySet();
         } else {
@@ -123,7 +122,7 @@ class PartialReader implements Partial {
                 final Matcher m = SECTION_LINE.matcher(line);
                 if(m.matches()) {
                     // Add previous section
-                    addSectionIfNameIsSet(source, sectionName, sectionDescription, lastSectionStart, charCount - line.length());
+                    addSectionIfNameIsSet(source, toSectionName(sectionName), sectionDescription, lastSectionStart, charCount - line.length());
                     // And setup for the new section
                     sectionName = m.group(1).trim();
                     sectionDescription = m.group(2).trim();
@@ -137,26 +136,38 @@ class PartialReader implements Partial {
         }
 
         // Add last section
-        addSectionIfNameIsSet(source, sectionName, sectionDescription, lastSectionStart, Integer.MAX_VALUE);
+        addSectionIfNameIsSet(source, toSectionName(sectionName), sectionDescription, lastSectionStart, Integer.MAX_VALUE);
 
         // And validate
-        if(!sections.containsKey(PARTIAL_SECTION)) {
+        if(!sections.containsKey(SectionName.PARTIAL)) {
             throw new SyntaxException(String.format("Missing required %s section", PARTIAL_SECTION));
         }
         
     }
 
-    private void addSectionIfNameIsSet(Supplier<Reader> sectionSource, String name, String description, int start, int end) throws SyntaxException {
-        if(name != null) {
-            if(sections.containsKey(name)) {
-                throw new SyntaxException(String.format("Duplicate section %s", name));
-            }
-            sections.put(name, new ParsedSection(sectionSource, name, description, start, end));
+    private void addSectionIfNameIsSet(Supplier<Reader> sectionSource, SectionName name, String description, int start, int end) throws SyntaxException {
+        if(name == null) {
+            return;
+        }
+        if(sections.containsKey(name)) {
+            throw new SyntaxException(String.format("Duplicate section '%s'", name));
+        }
+        sections.put(name, new ParsedSection(sectionSource, name, description, start, end));
+    }
+
+    private SectionName toSectionName(String str) throws SyntaxException {
+        if(str == null) {
+            return null;
+        }
+        try {
+            return SectionName.valueOf(str);
+        } catch(Exception e) {
+            throw new SyntaxException(String.format("Invalid section name '%s'", str));
         }
     }
 
     @Override
-    public Optional<Section> getSection(String name) {
+    public Optional<Section> getSection(Partial.SectionName name) {
         final Section s = sections.get(name);
         return s == null ? Optional.empty() : Optional.of(s);
     }

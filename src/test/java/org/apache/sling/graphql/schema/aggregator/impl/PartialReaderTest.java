@@ -22,14 +22,11 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,7 +35,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.sling.graphql.schema.aggregator.U;
+import org.apache.sling.graphql.schema.aggregator.impl.Partial.SectionName;
 import org.junit.Test;
 
 public class PartialReaderTest {
@@ -46,7 +43,7 @@ public class PartialReaderTest {
     private static final String NONAME = "<NO NAME>";
 
     private void assertSection(Partial p, String name, String description, String contentRegexp) throws IOException {
-        final Optional<Partial.Section> os = p.getSection(name);
+        final Optional<Partial.Section> os = p.getSection(SectionName.valueOf(name));
         assertTrue("Expecting section " + name, os.isPresent());
         final Partial.Section s = os.get();
         if(description != null) {
@@ -84,7 +81,7 @@ public class PartialReaderTest {
     public void parseExample() throws Exception {
         final PartialReader p = new PartialReader(NONAME, getResourceReaderSupplier("/partials/example.partial.txt"));
         assertSection(p, "PARTIAL", "Example GraphQL schema partial", "The contents.*PARTIAL.*PARTIAL.*PARTIAL.*equired section\\.");
-        assertSection(p, "REQUIRE", "base.scalars, base.schema", null);
+        assertSection(p, "REQUIRES", "base.scalars, base.schema", null);
         assertSection(p, "PROLOGUE", "", "The prologue content.*the aggregated schema.*other sections\\.");
         assertSection(p, "QUERY", "", "The optional query sections of all partials are aggregated in a query \\{\\} section in the output\\.");
         assertSection(p, "MUTATION", "", "The optional mutation sections of all partials are aggregated in a mutation \\{\\} section in the output\\.");
@@ -111,19 +108,30 @@ public class PartialReaderTest {
     }
 
     @Test
+    public void invalidSectionName() throws Exception {
+        final String invalidName = "REQUIRE";
+        final Exception e = assertThrows(
+            PartialReader.SyntaxException.class, 
+            () -> new PartialReader(NONAME, getStringReaderSupplier(String.format("PARTIAL:test\n%s:something\n", invalidName)))
+        );
+        final String expected = "Invalid section name 'REQUIRE'";
+        assertTrue(String.format("Expected %s in %s", expected, e.getMessage()), e.getMessage().contains(expected));
+    }
+
+    @Test
     public void duplicateSection() throws Exception {
         final Exception e = assertThrows(
             PartialReader.SyntaxException.class, 
             () -> new PartialReader(NONAME, getResourceReaderSupplier("/partials/duplicate.section.partial.txt"))
         );
-        final String expected = "Duplicate section DUPLICATE";
+        final String expected = "Duplicate section 'QUERY'";
         assertTrue(String.format("Expected %s in %s", expected, e.getMessage()), e.getMessage().contains(expected));
     }
 
     @Test
     public void requires() throws Exception {
         final PartialReader p = new PartialReader(NONAME, getResourceReaderSupplier("/partials/c.sdl.txt"));
-        assertTrue("Expecting requires section", p.getSection(PartialConstants.S_REQUIRES).isPresent());
+        assertTrue("Expecting requires section", p.getSection(Partial.SectionName.REQUIRES).isPresent());
         assertEquals("[a.sdl, b.sdl]", p.getRequiredPartialNames().toString());
     }
 }

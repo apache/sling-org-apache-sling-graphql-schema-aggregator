@@ -87,7 +87,7 @@ public class ProviderBundleTrackerTest {
         assertEquals(2, tracker.getSchemaProviders().size());
     }
 
-    private void assertSectionContent(Partial p, String name, String expected) throws IOException {
+    private void assertSectionContent(Partial p, Partial.SectionName name, String expected) throws IOException {
         final Optional<Partial.Section> os = p.getSection(name);
         assertTrue("Expecting section " + name, os.isPresent());
         assertEquals(expected, IOUtils.toString(os.get().getContent()).trim());
@@ -98,6 +98,6 @@ public class ProviderBundleTrackerTest {
         final Bundle a = U.mockProviderBundle(bundleContext, "A", ++bundleId, "1.txt");
         tracker.addingBundle(a, null);
         final Partial p = tracker.getSchemaProviders().values().iterator().next();
-        assertSectionContent(p, PartialConstants.S_QUERY, "Fake query for 1.txt");
+        assertSectionContent(p, Partial.SectionName.QUERY, "Fake query for 1.txt");
     }
 }
