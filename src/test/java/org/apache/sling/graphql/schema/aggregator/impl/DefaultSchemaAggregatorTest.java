@@ -52,7 +52,7 @@ public class DefaultSchemaAggregatorTest {
     private void assertOutput(String expectedResourceName, String actual) throws IOException {
         try(InputStream is = getClass().getResourceAsStream(expectedResourceName)) {
             assertNotNull("Expecting classpath resource to be present:" + expectedResourceName, is);
-            final String expected = IOUtils.toString(is, "UTF-8");
+            final String expected = IOUtils.toString(is, "UTF-8").trim();
             assertEquals(expected, actual);
         }
     }
@@ -86,9 +86,9 @@ public class DefaultSchemaAggregatorTest {
     @Test
     public void severalProviders() throws Exception{
         final StringWriter target = new StringWriter();
-        tracker.addingBundle(U.mockProviderBundle(bundleContext, "A", 1, "1.txt", "2.z.w", "3abc", "4abc"), null);
-        tracker.addingBundle(U.mockProviderBundle(bundleContext, "B", 2, "B1a.txt", "B2.xy"), null);
-        dsa.aggregate(target, "B1a", "B2", "2.z");
+        tracker.addingBundle(U.mockProviderBundle(bundleContext, "A", 1, "a1.txt", "a2.z.w.txt", "a3abc.txt", "a4abc.txt"), null);
+        tracker.addingBundle(U.mockProviderBundle(bundleContext, "B", 2, "b1a.txt", "b2.xy.txt"), null);
+        dsa.aggregate(target, "b1a", "b2.xy", "a2.z.w");
         final String sdl = target.toString().trim();
         assertContainsIgnoreCase("schema aggregated by DefaultSchemaAggregator", sdl);
         assertOutput("/partials/several-providers-output.txt", sdl);
@@ -97,11 +97,11 @@ public class DefaultSchemaAggregatorTest {
     @Test
     public void regexpSelection() throws Exception {
         final StringWriter target = new StringWriter();
-        tracker.addingBundle(U.mockProviderBundle(bundleContext, "A", 1, "a.authoring.1.txt", "a.authoring.2.txt", "3.txt", "4.txt"), null);
-        tracker.addingBundle(U.mockProviderBundle(bundleContext, "B", 2, "B1.txt", "B.authoring.txt"), null);
-        dsa.aggregate(target, "B1", "/.*\\.authoring.*/");
+        tracker.addingBundle(U.mockProviderBundle(bundleContext, "A", 1, "a.authoring.1.txt", "a.authoring.2.txt", "a.txt", "b.txt"), null);
+        tracker.addingBundle(U.mockProviderBundle(bundleContext, "B", 2, "b1.txt", "b.authoring.txt"), null);
+        dsa.aggregate(target, "b1", "/.*\\.authoring.*/");
         assertContainsIgnoreCase("schema aggregated by DefaultSchemaAggregator", target.toString());
-        U.assertPartialsFoundInSchema(target.toString(), "a.authoring.1", "a.authoring.2", "B.authoring", "B1");
+        U.assertPartialsFoundInSchema(target.toString(), "a.authoring.1", "a.authoring.2", "b.authoring", "b1");
     }
 
     @Test
@@ -191,15 +191,15 @@ public class DefaultSchemaAggregatorTest {
     @Test
     public void providersOrdering() throws Exception {
         final StringWriter target = new StringWriter();
-        tracker.addingBundle(U.mockProviderBundle(bundleContext, "ordering", 1, "Aprov.txt", "Cprov.txt", "Z_test.txt", "A_test.txt",
-                "Zprov.txt",
-                "Z_test.txt", "Bprov.txt", "C_test.txt"), null);
-        dsa.aggregate(target, "Aprov", "Zprov", "/[A-Z]_test/", "A_test", "Cprov");
+        tracker.addingBundle(U.mockProviderBundle(bundleContext, "ordering", 1, "aprov.txt", "cprov.txt", "z_test.txt", "a_test.txt",
+                "zprov.txt",
+                "z_test.txt", "bprov.txt", "c_test.txt"), null);
+        dsa.aggregate(target, "aprov", "zprov", "/[a-z]_test/", "a_test", "cprov");
         final String sdl = target.toString();
 
         // The order of named partials is kept, regexp selected ones are ordered by name
         // And A_test has already been used so it's not used again when called explicitly after regexp
-        final String expected = "End of Schema aggregated from {Aprov,Zprov,A_test,C_test,Z_test,Cprov} by DefaultSchemaAggregator";
+        final String expected = "End of Schema aggregated from {aprov,zprov,a_test,c_test,z_test,cprov} by DefaultSchemaAggregator";
         assertTrue(String.format("Expecting schema to contain [%s]: %s", expected, sdl), sdl.contains(expected));
    }
 }

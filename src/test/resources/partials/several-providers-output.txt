@@ -2,15 +2,15 @@
 
 type Query {
 
-# DefaultSchemaAggregator.source=B1a
-Fake query for B1a.txt
+# DefaultSchemaAggregator.source=b1a
+Fake query for b1a.txt
 
-# DefaultSchemaAggregator.source=B2
-Fake query for B2.xy
+# DefaultSchemaAggregator.source=b2.xy
+Fake query for b2.xy.txt
 
-# DefaultSchemaAggregator.source=2.z
-Fake query for 2.z.w
+# DefaultSchemaAggregator.source=a2.z.w
+Fake query for a2.z.w.txt
 
 }
 
-# End of Schema aggregated from {B1a,B2,2.z} by DefaultSchemaAggregator
+# End of Schema aggregated from {b1a,b2.xy,a2.z.w} by DefaultSchemaAggregator

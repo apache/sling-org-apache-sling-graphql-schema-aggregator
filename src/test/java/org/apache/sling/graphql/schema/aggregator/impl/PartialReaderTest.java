@@ -51,7 +51,7 @@ public class PartialReaderTest {
         }
         if(contentRegexp != null) {
             try(Reader r = s.getContent()) {
-                final String actual = IOUtils.toString(s.getContent()).trim();
+                final String actual = IOUtils.toString(r).trim();
                 final Pattern regexp = Pattern.compile(contentRegexp, Pattern.DOTALL);
                 assertTrue(
                     String.format("Expecting section %s to match %s but was [%s]", name, contentRegexp, actual),

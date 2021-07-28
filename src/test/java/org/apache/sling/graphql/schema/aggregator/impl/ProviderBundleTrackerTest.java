@@ -52,19 +52,19 @@ public class ProviderBundleTrackerTest {
 
     @Test
     public void addBundle() throws Exception {
-        final Bundle a = U.mockProviderBundle(bundleContext, "A", ++bundleId, "1.txt");
+        final Bundle a = U.mockProviderBundle(bundleContext, "A", ++bundleId, "a.txt");
         tracker.addingBundle(a, null);
         assertEquals(1, tracker.getSchemaProviders().size());
 
         final Partial s = tracker.getSchemaProviders().values().iterator().next();
         assertTrue(s.toString().contains(a.getSymbolicName()));
-        assertTrue(s.toString().contains("1.txt"));
+        assertTrue(s.toString().contains("a.txt"));
     }
 
     @Test
     public void addAndRemoveBundles() throws Exception {
-        final Bundle a = U.mockProviderBundle(bundleContext, "A", ++bundleId, "1.graphql.txt");
-        final Bundle b = U.mockProviderBundle(bundleContext, "B", ++bundleId, "2.txt", "1.txt");
+        final Bundle a = U.mockProviderBundle(bundleContext, "A", ++bundleId, "a1.graphql.txt");
+        final Bundle b = U.mockProviderBundle(bundleContext, "B", ++bundleId, "b2.txt", "b1.txt");
         tracker.addingBundle(a, null);
         tracker.addingBundle(b, null);
         assertEquals(3, tracker.getSchemaProviders().size());
@@ -79,11 +79,11 @@ public class ProviderBundleTrackerTest {
     @Test
     public void duplicatePartialName() throws Exception {
         final LogCapture capture = new LogCapture(ProviderBundleTracker.class.getName(), true);
-        final Bundle a = U.mockProviderBundle(bundleContext, "A", ++bundleId, "TT.txt");
-        final Bundle b = U.mockProviderBundle(bundleContext, "B", ++bundleId, "TT.txt", "another.x");
+        final Bundle a = U.mockProviderBundle(bundleContext, "A", ++bundleId, "tt.txt");
+        final Bundle b = U.mockProviderBundle(bundleContext, "B", ++bundleId, "tt.txt", "another.x");
         tracker.addingBundle(a, null);
         tracker.addingBundle(b, null);
-        capture.assertContains(Level.WARN, "Partial provider with name TT already present");
+        capture.assertContains(Level.WARN, "Partial provider with name tt already present");
         assertEquals(2, tracker.getSchemaProviders().size());
     }
 
@@ -95,9 +95,9 @@ public class ProviderBundleTrackerTest {
  
     @Test
     public void getSectionsContent() throws IOException {
-        final Bundle a = U.mockProviderBundle(bundleContext, "A", ++bundleId, "1.txt");
+        final Bundle a = U.mockProviderBundle(bundleContext, "A", ++bundleId, "a1.txt");
         tracker.addingBundle(a, null);
         final Partial p = tracker.getSchemaProviders().values().iterator().next();
-        assertSectionContent(p, Partial.SectionName.QUERY, "Fake query for 1.txt");
+        assertSectionContent(p, Partial.SectionName.QUERY, "Fake query for a1.txt");
     }
 }
