@@ -33,17 +33,9 @@ class BundleEntryPartial extends PartialReader implements Comparable<BundleEntry
     private final long bundleId;
 
     private BundleEntryPartial(Bundle b, URL bundleEntry) throws IOException {
-        super(getPartialName(bundleEntry), new URLReaderSupplier(bundleEntry));
+        super(PartialInfo.fromURL(bundleEntry), new URLReaderSupplier(bundleEntry));
         this.bundleId = b.getBundleId();
-        this.key = String.format("%s(%d):%s", b.getSymbolicName(), b.getBundleId(), bundleEntry.toString());
-    }
-
-    /** The partial's name is whatever follows the last slash, excluding the file extension */
-    static String getPartialName(URL url) {
-        final String [] parts = url.toString().split("/");
-        String result = parts[parts.length - 1];
-        final int lastDot = result.lastIndexOf(".");
-        return lastDot > 0 ? result.substring(0, lastDot) : result;
+        this.key = String.format("%s(%d):%s", b.getSymbolicName(), b.getBundleId(), bundleEntry);
     }
 
     /** @return a BundleEntryPartialProvider for the entryPath in

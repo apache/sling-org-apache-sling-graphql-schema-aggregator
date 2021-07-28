@@ -30,6 +30,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -79,7 +80,10 @@ public class PartialReaderTest {
 
     @Test
     public void parseExample() throws Exception {
-        final PartialReader p = new PartialReader(NONAME, getResourceReaderSupplier("/partials/example.partial.txt"));
+        final PartialReader p = new PartialReader(
+                PartialInfo.fromPath(Paths.get("/partials/example.partial.txt")),
+                getResourceReaderSupplier("/partials/example.partial.txt")
+        );
         assertSection(p, "PARTIAL", "Example GraphQL schema partial", "The contents.*PARTIAL.*PARTIAL.*PARTIAL.*equired section\\.");
         assertSection(p, "REQUIRES", "base.scalars, base.schema", null);
         assertSection(p, "PROLOGUE", "", "The prologue content.*the aggregated schema.*other sections\\.");
@@ -90,7 +94,10 @@ public class PartialReaderTest {
 
     @Test
     public void accentedCharacters() throws Exception {
-        final PartialReader p = new PartialReader(NONAME, getResourceReaderSupplier("/partials/utf8.partial.txt"));
+        final PartialReader p = new PartialReader(
+                PartialInfo.fromPath(Paths.get("/partials/utf8.partial.txt")),
+                getResourceReaderSupplier("/partials/utf8.partial.txt")
+        );
         assertSection(p, "PARTIAL", 
             "Example GraphQL schema partial with caract\u00E8res accentu\u00E9s",
             "L'\u00E9t\u00E9 nous \u00E9vitons l'\u00E2tre et pr\u00E9f\u00E9rons Chateaun\u00F6f et les \u00E4kr\u00E0s."
@@ -101,7 +108,7 @@ public class PartialReaderTest {
     public void missingPartialSection() throws Exception {
         final Exception e = assertThrows(
             PartialReader.SyntaxException.class, 
-            () -> new PartialReader(NONAME, getStringReaderSupplier(""))
+            () -> new PartialReader(PartialInfo.EMPTY, getStringReaderSupplier(""))
         );
         final String expected = "Missing required PARTIAL section";
         assertTrue(String.format("Expected %s in %s", expected, e.getMessage()), e.getMessage().contains(expected));
@@ -112,7 +119,8 @@ public class PartialReaderTest {
         final String invalidName = "REQUIRE";
         final Exception e = assertThrows(
             PartialReader.SyntaxException.class, 
-            () -> new PartialReader(NONAME, getStringReaderSupplier(String.format("PARTIAL:test\n%s:something\n", invalidName)))
+            () -> new PartialReader(
+                    PartialInfo.EMPTY, getStringReaderSupplier(String.format("PARTIAL:test\n%s:something\n", invalidName)))
         );
         final String expected = "Invalid section name 'REQUIRE'";
         assertTrue(String.format("Expected %s in %s", expected, e.getMessage()), e.getMessage().contains(expected));
@@ -122,7 +130,10 @@ public class PartialReaderTest {
     public void duplicateSection() throws Exception {
         final Exception e = assertThrows(
             PartialReader.SyntaxException.class, 
-            () -> new PartialReader(NONAME, getResourceReaderSupplier("/partials/duplicate.section.partial.txt"))
+            () -> new PartialReader(
+                    PartialInfo.fromPath(Paths.get("/partials/duplicate.section.partial.txt")),
+                    getResourceReaderSupplier("/partials/duplicate.section.partial.txt")
+            )
         );
         final String expected = "Duplicate section 'QUERY'";
         assertTrue(String.format("Expected %s in %s", expected, e.getMessage()), e.getMessage().contains(expected));
@@ -130,7 +141,10 @@ public class PartialReaderTest {
 
     @Test
     public void requires() throws Exception {
-        final PartialReader p = new PartialReader(NONAME, getResourceReaderSupplier("/partials/c.sdl.txt"));
+        final PartialReader p = new PartialReader(
+                PartialInfo.fromPath(Paths.get("/partials/c.sdl.txt")),
+                getResourceReaderSupplier("/partials/c.sdl.txt")
+        );
         assertTrue("Expecting requires section", p.getSection(Partial.SectionName.REQUIRES).isPresent());
         assertEquals("[a.sdl, b.sdl]", p.getRequiredPartialNames().toString());
     }

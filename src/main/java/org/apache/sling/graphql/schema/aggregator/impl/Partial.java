@@ -23,12 +23,15 @@ import java.io.Reader;
 import java.util.Optional;
 import java.util.Set;
 
+import org.jetbrains.annotations.NotNull;
+import org.osgi.framework.Version;
+
 /** Wrapper for the partials format, that parses a partial file and
  *  provides access to its sections.
  *  See the example.partial.txt and the tests for a description of
  *  the format.
   */
-interface Partial {
+public interface Partial {
     /** A section in the partial */
     interface Section {
         SectionName getName();
@@ -43,14 +46,14 @@ interface Partial {
         QUERY,
         MUTATION,
         TYPES
-    };
+    }
 
     /** The name of this partial */
-    String getName();
+    @NotNull String getName();
 
     /** Return a specific section of the partial, by name */
-    Optional<Section> getSection(SectionName name);
+    @NotNull Optional<Section> getSection(SectionName name);
 
     /** Names of the Partials on which this one depends */
-    Set<String> getRequiredPartialNames();
+    @NotNull Set<String> getRequiredPartialNames();
 }

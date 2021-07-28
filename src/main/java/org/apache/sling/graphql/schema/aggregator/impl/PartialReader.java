@@ -32,13 +32,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.input.BoundedReader;
+import org.jetbrains.annotations.NotNull;
 
 /** Reader for the partials format, which parses a partial file and
  *  provides access to its sections.
  *  See the example.partial.txt and the tests for a description of
  *  the format.
   */
-class PartialReader implements Partial {
+public class PartialReader implements Partial {
     private static final Pattern SECTION_LINE = Pattern.compile("([A-Z]+) *:(.*)");
     private static final int EOL = '\n';
 
@@ -88,8 +89,8 @@ class PartialReader implements Partial {
         }
     }
     
-    PartialReader(String name, Supplier<Reader> source) throws IOException {
-        this.name = name;
+    public PartialReader(@NotNull PartialInfo partialInfo, @NotNull Supplier<Reader> source) throws IOException {
+        this.name = partialInfo.getName();
         parse(source);
         final Partial.Section requirements = sections.get(SectionName.REQUIRES);
         if(requirements == null) {
@@ -167,18 +168,18 @@ class PartialReader implements Partial {
     }
 
     @Override
-    public Optional<Section> getSection(Partial.SectionName name) {
+    public @NotNull Optional<Section> getSection(Partial.SectionName name) {
         final Section s = sections.get(name);
-        return s == null ? Optional.empty() : Optional.of(s);
+        return Optional.ofNullable(s);
     }
 
     @Override
-    public String getName() {
+    public @NotNull String getName() {
         return name;
     }
 
     @Override
-    public Set<String> getRequiredPartialNames() {
+    public @NotNull Set<String> getRequiredPartialNames() {
         return requiredPartialNames;
     }
 }
