@@ -83,7 +83,7 @@ public class ProviderBundleTrackerTest {
         final Bundle b = U.mockProviderBundle(bundleContext, "B", ++bundleId, "tt.txt", "another.x");
         tracker.addingBundle(a, null);
         tracker.addingBundle(b, null);
-        capture.assertContains(Level.WARN, "Partial provider with name tt already present");
+        capture.assertContains(Level.WARN, "Partial provider for partial tt already present");
         assertEquals(2, tracker.getSchemaProviders().size());
     }
 

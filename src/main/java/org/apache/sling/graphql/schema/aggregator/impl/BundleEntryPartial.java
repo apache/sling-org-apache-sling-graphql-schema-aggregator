@@ -74,6 +74,6 @@ class BundleEntryPartial extends PartialReader implements Comparable<BundleEntry
 
     @Override
     public int compareTo(BundleEntryPartial o) {
-        return getName().compareTo(o.getName());
+        return getPartialInfo().compareTo(o.getPartialInfo());
     }
 }

@@ -24,7 +24,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.jetbrains.annotations.NotNull;
-import org.osgi.framework.Version;
 
 /** Wrapper for the partials format, that parses a partial file and
  *  provides access to its sections.
@@ -48,12 +47,24 @@ public interface Partial {
         TYPES
     }
 
-    /** The name of this partial */
-    @NotNull String getName();
+    /**
+     * Returns the partial info.
+     *
+     * @return the partial info
+     */
+    @NotNull PartialInfo getPartialInfo();
 
     /** Return a specific section of the partial, by name */
     @NotNull Optional<Section> getSection(SectionName name);
 
     /** Names of the Partials on which this one depends */
-    @NotNull Set<String> getRequiredPartialNames();
+    @NotNull Set<PartialInfo> getRequiredPartialNames();
+
+    /**
+     * Returns the MD5 hash of the source that was used to build this partial.
+     *
+     * @return the MD5 hash of the source that was used to build this partial
+     */
+    @NotNull String getMD5Hash();
+
 }

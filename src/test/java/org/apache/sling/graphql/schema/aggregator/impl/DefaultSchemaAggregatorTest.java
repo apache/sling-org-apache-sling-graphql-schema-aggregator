@@ -18,21 +18,12 @@
  */
 package org.apache.sling.graphql.schema.aggregator.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.util.Optional;
 import java.util.stream.Stream;
-
-import graphql.language.TypeDefinition;
-import graphql.schema.idl.SchemaParser;
-import graphql.schema.idl.TypeDefinitionRegistry;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.sling.graphql.schema.aggregator.U;
@@ -41,6 +32,14 @@ import org.junit.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 
+import graphql.language.TypeDefinition;
+import graphql.schema.idl.SchemaParser;
+import graphql.schema.idl.TypeDefinitionRegistry;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -74,7 +73,7 @@ public class DefaultSchemaAggregatorTest {
     }
 
     @Test
-    public void noProviders() throws Exception{
+    public void noProviders() {
         final StringWriter target = new StringWriter();
         final IOException iox = assertThrows(IOException.class, () -> dsa.aggregate(target, "Aprov", "Bprov"));
         assertContainsIgnoreCase("missing providers", iox.getMessage());
@@ -173,6 +172,25 @@ public class DefaultSchemaAggregatorTest {
             assertTrue("Expecting aggregate to contain " + s, sdl.contains(s));
         }));
    }
+
+    @Test
+    public void versionedPartials() throws IOException {
+        final StringWriter target = new StringWriter();
+        tracker.addingBundle(U.mockProviderBundle(bundleContext, "required.partials", 1, "required-1.0.0.txt"), null);
+        tracker.addingBundle(U.mockProviderBundle(bundleContext, "versioned.partials", 2, "versioned-1.0.0.txt"), null);
+        dsa.aggregate(target, "versioned-1.0.0");
+        assertOutput("/partials/versionedPartials-output.txt", target.toString());
+    }
+
+    @Test
+    public void versionedPartialsMissingCorrectVersion() throws IOException {
+        final StringWriter target = new StringWriter();
+        tracker.addingBundle(U.mockProviderBundle(bundleContext, "required.partials", 1, "required-1.0.0.txt"), null);
+        tracker.addingBundle(U.mockProviderBundle(bundleContext, "versioned.partials", 2, "versioned-2.0.0.txt"), null);
+        final IOException iox = assertThrows(IOException.class, () -> dsa.aggregate(target, "versioned-2.0.0"));
+        assertContainsIgnoreCase("Missing providers", iox.getMessage());
+        assertContainsIgnoreCase("required-2.0.0", iox.getMessage());
+    }
 
     @Test
     public void cycleInRequirements() throws Exception {

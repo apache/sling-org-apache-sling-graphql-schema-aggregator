@@ -1,0 +1,4 @@
+PARTIAL: A partial that will be required by another.
+
+PROLOGUE:
+This section should be present at the top of the generated schema file.

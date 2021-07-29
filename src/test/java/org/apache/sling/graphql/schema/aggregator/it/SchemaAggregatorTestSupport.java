@@ -85,6 +85,7 @@ public abstract class SchemaAggregatorTestSupport extends TestSupport {
                 .put("whitelist.bundles.regexp", "^PAXEXAM.*$")
                 .asOption(),
             mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.servlet-helpers").versionAsInProject(),
+            mavenBundle().groupId("commons-codec").artifactId("commons-codec").versionAsInProject(),
             junitBundles()
         );
     }
