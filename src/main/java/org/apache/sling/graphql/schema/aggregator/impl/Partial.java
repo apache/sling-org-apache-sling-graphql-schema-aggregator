@@ -61,10 +61,10 @@ public interface Partial {
     @NotNull Set<PartialInfo> getRequiredPartialNames();
 
     /**
-     * Returns the MD5 hash of the source that was used to build this partial.
+     * Returns the SHA256 hash of the source that was used to build this partial.
      *
-     * @return the MD5 hash of the source that was used to build this partial
+     * @return the SHA256 hash of the source that was used to build this partial
      */
-    @NotNull String getMD5Hash();
+    @NotNull String getSHA256Hash();
 
 }

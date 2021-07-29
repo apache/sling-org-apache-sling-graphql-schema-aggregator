@@ -48,7 +48,7 @@ public class PartialReader implements Partial {
     private final Map<SectionName, Section> sections = new EnumMap<>(SectionName.class);
     private final PartialInfo partialInfo;
     private final Set<PartialInfo> requiredPartialNames;
-    private final String md5Hash;
+    private final String sha256Hash;
 
     /** The PARTIAL section is the only required one */
     public static final String PARTIAL_SECTION = "PARTIAL";
@@ -95,8 +95,8 @@ public class PartialReader implements Partial {
     public PartialReader(@NotNull PartialInfo partialInfo, @NotNull Supplier<Reader> source) throws IOException {
         this.partialInfo = partialInfo;
         parse(source);
-        this.md5Hash = Hex.encodeHexString(
-                DigestUtils.updateDigest(DigestUtils.getMd5Digest(), IOUtils.toByteArray(source.get(), StandardCharsets.UTF_8)).digest());
+        this.sha256Hash = Hex.encodeHexString(
+                DigestUtils.updateDigest(DigestUtils.getSha256Digest(), IOUtils.toByteArray(source.get(), StandardCharsets.UTF_8)).digest());
         final Partial.Section requirements = sections.get(SectionName.REQUIRES);
         if(requirements == null) {
             requiredPartialNames = Collections.emptySet();
@@ -182,7 +182,7 @@ public class PartialReader implements Partial {
     }
 
     @Override
-    public @NotNull String getMD5Hash() {
-        return md5Hash;
+    public @NotNull String getSHA256Hash() {
+        return sha256Hash;
     }
 }
