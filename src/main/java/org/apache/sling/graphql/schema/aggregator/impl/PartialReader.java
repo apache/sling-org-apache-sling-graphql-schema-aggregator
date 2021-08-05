@@ -20,17 +20,19 @@ package org.apache.sling.graphql.schema.aggregator.impl;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.codec.binary.Hex;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.BoundedReader;
 import org.jetbrains.annotations.NotNull;
 
@@ -44,8 +46,9 @@ public class PartialReader implements Partial {
     private static final int EOL = '\n';
 
     private final Map<SectionName, Section> sections = new EnumMap<>(SectionName.class);
-    private final String name;
-    private final Set<String> requiredPartialNames;
+    private final PartialInfo partialInfo;
+    private final Set<PartialInfo> requiredPartialNames;
+    private final String digest;
 
     /** The PARTIAL section is the only required one */
     public static final String PARTIAL_SECTION = "PARTIAL";
@@ -90,20 +93,15 @@ public class PartialReader implements Partial {
     }
     
     public PartialReader(@NotNull PartialInfo partialInfo, @NotNull Supplier<Reader> source) throws IOException {
-        this.name = partialInfo.getName();
+        this.partialInfo = partialInfo;
         parse(source);
+        this.digest = "SHA-256: " + Hex.encodeHexString(
+                DigestUtils.updateDigest(DigestUtils.getSha256Digest(), IOUtils.toByteArray(source.get(), StandardCharsets.UTF_8)).digest());
         final Partial.Section requirements = sections.get(SectionName.REQUIRES);
         if(requirements == null) {
             requiredPartialNames = Collections.emptySet();
         } else {
-            requiredPartialNames = new HashSet<>();
-            Stream.of(
-                requirements.getDescription().split(",")
-            )
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .forEach(requiredPartialNames::add)
-            ;
+            requiredPartialNames = PartialInfo.fromRequiresSection(requirements.getDescription());
         }
     }
 
@@ -168,18 +166,23 @@ public class PartialReader implements Partial {
     }
 
     @Override
+    public @NotNull PartialInfo getPartialInfo() {
+        return partialInfo;
+    }
+
+    @Override
     public @NotNull Optional<Section> getSection(Partial.SectionName name) {
         final Section s = sections.get(name);
         return Optional.ofNullable(s);
     }
 
     @Override
-    public @NotNull String getName() {
-        return name;
+    public @NotNull Set<PartialInfo> getRequiredPartialNames() {
+        return Collections.unmodifiableSet(requiredPartialNames);
     }
 
     @Override
-    public @NotNull Set<String> getRequiredPartialNames() {
-        return requiredPartialNames;
+    public @NotNull String getDigest() {
+        return digest;
     }
 }

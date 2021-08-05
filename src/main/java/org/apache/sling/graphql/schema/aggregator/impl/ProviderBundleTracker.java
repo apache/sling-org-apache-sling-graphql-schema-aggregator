@@ -55,7 +55,7 @@ public class ProviderBundleTracker implements BundleTrackerCustomizer<Object> {
     public static final String SCHEMA_PATH_HEADER = "Sling-GraphQL-Schema";
 
     private final Logger log = LoggerFactory.getLogger(getClass().getName());
-    private final Map<String, BundleEntryPartial> schemaProviders = new ConcurrentHashMap<>();
+    private final Map<PartialInfo, BundleEntryPartial> schemaProviders = new ConcurrentHashMap<>();
 
     private BundleContext bundleContext;
 
@@ -96,11 +96,11 @@ public class ProviderBundleTracker implements BundleTrackerCustomizer<Object> {
 
     private void addIfNotPresent(BundleEntryPartial a) {
         if(a != null) {
-            if(schemaProviders.containsKey(a.getName())) {
-                log.warn("Partial provider with name {} already present, new one will be ignored", a.getName());
+            if(schemaProviders.containsKey(a.getPartialInfo())) {
+                log.warn("Partial provider for partial {} already present, new one will be ignored", a.getPartialInfo());
             } else {
                 log.info("Registering {}", a);
-                schemaProviders.put(a.getName(), a);
+                schemaProviders.put(a.getPartialInfo(), a);
             }
         }
     }
@@ -121,7 +121,7 @@ public class ProviderBundleTracker implements BundleTrackerCustomizer<Object> {
         // do nothing
     }
 
-    Map<String, Partial> getSchemaProviders() {
+    Map<PartialInfo, Partial> getSchemaProviders() {
         return Collections.unmodifiableMap(schemaProviders);
     }
 }

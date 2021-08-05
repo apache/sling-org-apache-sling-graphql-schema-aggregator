@@ -49,7 +49,7 @@ public class DefaultSchemaAggregator implements SchemaAggregator {
         NO_BLOCK,
         WITH_BLOCK_IF_NOT_EMPTY,
         WITH_BLOCK
-    };
+    }
 
     @Reference
     private ProviderBundleTracker tracker;
@@ -91,7 +91,7 @@ public class DefaultSchemaAggregator implements SchemaAggregator {
     }
 
     private void writeSourceInfo(Writer target, Partial p) throws IOException {
-        target.write(String.format("%n# %s.source=%s%n", getClass().getSimpleName(), p.getName()));
+        target.write(String.format("%n# %s.source=%s%n", getClass().getSimpleName(), p.getPartialInfo()));
     }
 
     @Override
@@ -100,7 +100,7 @@ public class DefaultSchemaAggregator implements SchemaAggregator {
         target.write(String.format("# %s", info));
 
         // build list of selected providers
-        final Map<String, Partial> providers = tracker.getSchemaProviders();
+        final Map<PartialInfo, Partial> providers = tracker.getSchemaProviders();
         if(log.isDebugEnabled()) {
             log.debug("Aggregating schemas, request={}, providers={}", Arrays.asList(providerNamesOrRegexp), providers.keySet());
         }
@@ -123,51 +123,57 @@ public class DefaultSchemaAggregator implements SchemaAggregator {
             if(partialNames.length() > 0) {
                 partialNames.append(",");
             }
-            partialNames.append(p.getName());
+            partialNames.append(p.getPartialInfo());
         });
         target.write(String.format("%n# End of Schema aggregated from {%s} by %s", partialNames, getClass().getSimpleName()));
     }
 
-    Set<Partial> selectProviders(Map<String, Partial> providers, Set<String> missing, String ... providerNamesOrRegexp) {
+    Set<Partial> selectProviders(Map<PartialInfo, Partial> providers, Set<String> missing, String ... providerNamesOrRegexp) {
         final Set<Partial> result= new LinkedHashSet<>();
         for(String str : providerNamesOrRegexp) {
             final Pattern p = toRegexp(str);
             if(p != null) {
                 log.debug("Selecting providers matching {}", p);
                 providers.entrySet().stream()
-                    .filter(e -> p.matcher(e.getKey()).matches())
-                    .sorted(Comparator.comparing(e -> e.getValue().getName()))
+                    .filter(e -> p.matcher(e.getKey().getName()).matches())
+                    .sorted(Comparator.comparing(e -> e.getValue().getPartialInfo()))
                     .forEach(e -> addWithRequirements(providers, result, missing, e.getValue(), 0))
                 ;
             } else {
                 log.debug("Selecting provider with key={}", str);
-                final Partial psp = providers.get(str);
-                if(psp == null) {
+                Optional<PartialInfo> fromString = PartialInfo.fromRequiresSection(str).stream().findFirst();
+                if (fromString.isPresent()) {
+                    PartialInfo selected = fromString.get();
+                    final Partial psp = providers.get(selected);
+                    if (psp == null) {
+                        missing.add(str);
+                        continue;
+                    }
+                    addWithRequirements(providers, result, missing, psp, 0);
+                } else {
                     missing.add(str);
-                    continue;
                 }
-                addWithRequirements(providers, result, missing, psp, 0);
             }
         }
         return result;
     }
 
-    private void addWithRequirements(Map<String, Partial> providers, Set<Partial> addTo, Set<String> missing, Partial p, int recursionLevel) {
+    private void addWithRequirements(Map<PartialInfo, Partial> providers, Set<Partial> addTo, Set<String> missing, Partial p, int recursionLevel) {
 
         // simplistic cycle detection
         if(recursionLevel > MAX_REQUIREMENTS_RECURSION_LEVEL) {
             throw new RuntimeException(String.format(
                 "Requirements depth over %d, requirements cycle suspected at partial %s", 
                 MAX_REQUIREMENTS_RECURSION_LEVEL,
-                p.getName()
+                p.getPartialInfo()
             ));
         }
 
         addTo.add(p);
-        for(String req : p.getRequiredPartialNames()) {
+        for(PartialInfo req : p.getRequiredPartialNames()) {
             final Partial preq = providers.get(req);
             if(preq == null) {
-                missing.add(req);
+                missing.add(req.toString());
             } else {
                 addWithRequirements(providers, addTo, missing, preq, recursionLevel + 1);
             }

@@ -22,6 +22,7 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,7 +33,7 @@ import org.osgi.framework.Version;
 /**
  * This class provides some utility methods to extract information about a partial without parsing it.
  */
-public final class PartialInfo {
+public final class PartialInfo implements Comparable<PartialInfo> {
 
     private static final String PARTIAL_NAME_AND_VERSION_REGEX = "([a-z][a-zA-Z0-9_\\.]*)(-(\\d\\.\\d\\.\\d))?";
 
@@ -70,6 +71,40 @@ public final class PartialInfo {
      */
     public @NotNull Version getVersion() {
         return version;
+    }
+
+    @Override
+    public int compareTo(@NotNull PartialInfo o) {
+        if (this.equals(o)) {
+            return 0;
+        }
+        int nameComparison = this.name.compareTo(o.name);
+        if (nameComparison == 0) {
+            return version.compareTo(o.version);
+        }
+        return nameComparison;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, version);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (obj instanceof PartialInfo) {
+            PartialInfo other = (PartialInfo) obj;
+            return Objects.equals(name, other.name) && Objects.equals(version, other.version);
+        }
+        return false;
+    }
+
+    @Override
+    public String toString() {
+        return name + (version == Version.emptyVersion ? "" : "-" + version);
     }
 
     /**

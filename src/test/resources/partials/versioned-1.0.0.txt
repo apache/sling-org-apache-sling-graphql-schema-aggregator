@@ -1,0 +1,3 @@
+PARTIAL: Testing a versioned partial
+
+REQUIRES: required-1.0.0

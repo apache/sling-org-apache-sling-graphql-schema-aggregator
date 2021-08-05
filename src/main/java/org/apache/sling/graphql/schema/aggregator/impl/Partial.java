@@ -24,7 +24,6 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.jetbrains.annotations.NotNull;
-import org.osgi.framework.Version;
 
 /** Wrapper for the partials format, that parses a partial file and
  *  provides access to its sections.
@@ -48,12 +47,35 @@ public interface Partial {
         TYPES
     }
 
-    /** The name of this partial */
-    @NotNull String getName();
+    /**
+     * Returns the partial info.
+     *
+     * @return the partial info
+     */
+    @NotNull PartialInfo getPartialInfo();
 
     /** Return a specific section of the partial, by name */
     @NotNull Optional<Section> getSection(SectionName name);
 
     /** Names of the Partials on which this one depends */
-    @NotNull Set<String> getRequiredPartialNames();
+    @NotNull Set<PartialInfo> getRequiredPartialNames();
+
+    /**
+     * <p>
+     * Returns the digest of the source that was used to build this partial. Implementations should output this using the following format:
+     * <pre>
+     * algorithm: digest
+     * </pre>
+     * where the algorithm has to be one of the standard names defined in the
+     * <a href="https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#messagedigest-algorithms">Java Security Standard Algorithm Names</a>.
+     * </p>
+     * <p>A SHA-256 digest would have, for example, the following format:
+     * <pre>
+     * SHA-256: 703bd06e9d65118c75abe9a7a06f6a2fcdb8a19ef62d994f4cc1be0b34420383
+     * </pre>
+     * </p>
+     * @return the digest of the source that was used to build this partial
+     */
+    @NotNull String getDigest();
+
 }

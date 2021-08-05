@@ -1,0 +1,10 @@
+# Schema aggregated by DefaultSchemaAggregator
+
+# DefaultSchemaAggregator.source=required-1.0.0
+This section should be present at the top of the generated schema file.
+
+type Query {
+
+}
+
+# End of Schema aggregated from {versioned-1.0.0,required-1.0.0} by DefaultSchemaAggregator
