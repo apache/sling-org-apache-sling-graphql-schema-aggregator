@@ -61,10 +61,21 @@ public interface Partial {
     @NotNull Set<PartialInfo> getRequiredPartialNames();
 
     /**
-     * Returns the SHA256 hash of the source that was used to build this partial.
-     *
-     * @return the SHA256 hash of the source that was used to build this partial
+     * <p>
+     * Returns the digest of the source that was used to build this partial. Implementations should output this using the following format:
+     * <pre>
+     * algorithm: digest
+     * </pre>
+     * where the algorithm has to be one of the standard names defined in the
+     * <a href="https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html#messagedigest-algorithms">Java Security Standard Algorithm Names</a>.
+     * </p>
+     * <p>A SHA-256 digest would have, for example, the following format:
+     * <pre>
+     * SHA-256: 703bd06e9d65118c75abe9a7a06f6a2fcdb8a19ef62d994f4cc1be0b34420383
+     * </pre>
+     * </p>
+     * @return the digest of the source that was used to build this partial
      */
-    @NotNull String getSHA256Hash();
+    @NotNull String getDigest();
 
 }
