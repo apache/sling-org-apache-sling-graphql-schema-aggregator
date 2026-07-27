@@ -21,6 +21,7 @@ package org.apache.sling.graphql.schema.aggregator.impl;
 import java.io.IOException;
 import java.util.Optional;
 
+import ch.qos.logback.classic.Level;
 import org.apache.commons.io.IOUtils;
 import org.apache.sling.graphql.schema.aggregator.LogCapture;
 import org.apache.sling.graphql.schema.aggregator.U;
@@ -28,8 +29,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-
-import ch.qos.logback.classic.Level;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -92,7 +91,7 @@ public class ProviderBundleTrackerTest {
         assertTrue("Expecting section " + name, os.isPresent());
         assertEquals(expected, IOUtils.toString(os.get().getContent()).trim());
     }
- 
+
     @Test
     public void getSectionsContent() throws IOException {
         final Bundle a = U.mockProviderBundle(bundleContext, "A", ++bundleId, "a1.txt");

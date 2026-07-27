@@ -18,25 +18,6 @@
  */
 package org.apache.sling.graphql.schema.aggregator;
 
-import org.osgi.framework.Bundle;
-
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.ops4j.pax.tinybundles.core.TinyBundles.bundle;
-
-import org.apache.sling.graphql.schema.aggregator.impl.ProviderBundleTracker;
-import org.ops4j.pax.exam.Option;
-import org.ops4j.pax.tinybundles.core.TinyBundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.Constants;
-import org.osgi.framework.wiring.BundleRevision;
-import org.osgi.framework.wiring.BundleWire;
-import org.osgi.framework.wiring.BundleWiring;
-import org.osgi.namespace.extender.ExtenderNamespace;
-
-import static org.ops4j.pax.exam.CoreOptions.streamBundle;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileWriter;
@@ -44,20 +25,35 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.attribute.FileAttribute;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Dictionary;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.sling.graphql.schema.aggregator.impl.ProviderBundleTracker;
+import org.ops4j.pax.exam.Option;
+import org.ops4j.pax.tinybundles.core.TinyBundle;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.Constants;
+import org.osgi.framework.wiring.BundleRevision;
+import org.osgi.framework.wiring.BundleWire;
+import org.osgi.framework.wiring.BundleWiring;
+import org.osgi.namespace.extender.ExtenderNamespace;
+
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+import static org.ops4j.pax.exam.CoreOptions.streamBundle;
+import static org.ops4j.pax.tinybundles.core.TinyBundles.bundle;
+
 /** Test Utilities */
 public class U {
-    
-    public static Bundle mockProviderBundle(BundleContext bc, String symbolicName, long id, String ... schemaNames) throws IOException {
+
+    public static Bundle mockProviderBundle(BundleContext bc, String symbolicName, long id, String... schemaNames)
+            throws IOException {
         final UUID uuid = UUID.randomUUID();
         final Bundle b = mock(Bundle.class);
         final BundleWiring wiring = mock(BundleWiring.class);
@@ -76,9 +72,9 @@ public class U {
         when(b.getHeaders()).thenReturn(headers);
 
         final List<String> resources = new ArrayList<>();
-        for(String name : schemaNames) {
+        for (String name : schemaNames) {
             URL partial = testFileURL(name);
-            if(partial == null) {
+            if (partial == null) {
                 File tempFolder = Files.createTempDirectory(uuid.toString()).toFile();
                 partial = fakePartialURL(tempFolder, name);
             }
@@ -110,18 +106,15 @@ public class U {
         return String.format("PARTIAL:%s\nQUERY:%s\nFake query for %s\n", name, name, name);
     }
 
-    public static Option tinyProviderBundle(String symbolicName, String ... partialsNames) {
+    public static Option tinyProviderBundle(String symbolicName, String... partialsNames) {
         final String schemaPath = symbolicName + "/schemas";
-        final TinyBundle b = bundle()
-            .set(ProviderBundleTracker.SCHEMA_PATH_HEADER, schemaPath)
-            .set(Constants.BUNDLE_SYMBOLICNAME, symbolicName)
-            .set(
-                    Constants.REQUIRE_CAPABILITY,
-                    "osgi.extender;filter:=\"(&(osgi.extender=sling.graphql-schema-aggregator)(version>=0.1)(!(version>=1.0)))\""
-            )
-        ;
+        final TinyBundle b = bundle().set(ProviderBundleTracker.SCHEMA_PATH_HEADER, schemaPath)
+                .set(Constants.BUNDLE_SYMBOLICNAME, symbolicName)
+                .set(
+                        Constants.REQUIRE_CAPABILITY,
+                        "osgi.extender;filter:=\"(&(osgi.extender=sling.graphql-schema-aggregator)(version>=0.1)(!(version>=1.0)))\"");
 
-        for(String name : partialsNames) {
+        for (String name : partialsNames) {
             final String resourcePath = schemaPath + "/" + name + ".txt";
             b.add(resourcePath, new ByteArrayInputStream(fakePartialSchema(name).getBytes()));
         }
@@ -129,10 +122,10 @@ public class U {
         return streamBundle(b.build());
     }
 
-    public static void assertPartialsFoundInSchema(String output, String ... partialName) {
-        for(String name : partialName) {
+    public static void assertPartialsFoundInSchema(String output, String... partialName) {
+        for (String name : partialName) {
             final String expected = "DefaultSchemaAggregator.source=" + name;
-            if(!output.contains(expected)) {
+            if (!output.contains(expected)) {
                 fail(String.format("Expecting output to contain %s: %s", expected, output));
             }
         }

@@ -1,22 +1,21 @@
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- ~ Licensed to the Apache Software Foundation (ASF) under one
- ~ or more contributor license agreements.  See the NOTICE file
- ~ distributed with this work for additional information
- ~ regarding copyright ownership.  The ASF licenses this file
- ~ to you under the Apache License, Version 2.0 (the
- ~ "License"); you may not use this file except in compliance
- ~ with the License.  You may obtain a copy of the License at
- ~
- ~   http://www.apache.org/licenses/LICENSE-2.0
- ~
- ~ Unless required by applicable law or agreed to in writing,
- ~ software distributed under the License is distributed on an
- ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- ~ KIND, either express or implied.  See the License for the
- ~ specific language governing permissions and limitations
- ~ under the License.
- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
-
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package org.apache.sling.graphql.schema.aggregator.impl;
 
 import java.io.IOException;
@@ -42,14 +41,8 @@ import org.slf4j.LoggerFactory;
 
 /** Tracks bundles which provide partial schemas and collects the corresponding set of schemas.
  */
-@Component(
-        service = {ProviderBundleTracker.class}
-)
-@Capability(
-        namespace = ExtenderNamespace.EXTENDER_NAMESPACE,
-        name = "sling.graphql-schema-aggregator",
-        version = "0.1"
-)
+@Component(service = {ProviderBundleTracker.class})
+@Capability(namespace = ExtenderNamespace.EXTENDER_NAMESPACE, name = "sling.graphql-schema-aggregator", version = "0.1")
 public class ProviderBundleTracker implements BundleTrackerCustomizer<Object> {
 
     public static final String SCHEMA_PATH_HEADER = "Sling-GraphQL-Schema";
@@ -70,8 +63,10 @@ public class ProviderBundleTracker implements BundleTrackerCustomizer<Object> {
     public Object addingBundle(Bundle bundle, BundleEvent event) {
         BundleWiring bundleWiring = bundle.adapt(BundleWiring.class);
         Bundle us = bundleContext.getBundle();
-        if (bundleWiring.getRequiredWires(ExtenderNamespace.EXTENDER_NAMESPACE).stream().map(BundleWire::getProvider)
-                .map(BundleRevision::getBundle).anyMatch(us::equals)) {
+        if (bundleWiring.getRequiredWires(ExtenderNamespace.EXTENDER_NAMESPACE).stream()
+                .map(BundleWire::getProvider)
+                .map(BundleRevision::getBundle)
+                .anyMatch(us::equals)) {
             final String providersPath = bundle.getHeaders().get(SCHEMA_PATH_HEADER);
             if (providersPath == null) {
                 log.debug("Bundle {} has no {} header, ignored", bundle.getSymbolicName(), SCHEMA_PATH_HEADER);
@@ -95,9 +90,10 @@ public class ProviderBundleTracker implements BundleTrackerCustomizer<Object> {
     }
 
     private void addIfNotPresent(BundleEntryPartial a) {
-        if(a != null) {
-            if(schemaProviders.containsKey(a.getPartialInfo())) {
-                log.warn("Partial provider for partial {} already present, new one will be ignored", a.getPartialInfo());
+        if (a != null) {
+            if (schemaProviders.containsKey(a.getPartialInfo())) {
+                log.warn(
+                        "Partial provider for partial {} already present, new one will be ignored", a.getPartialInfo());
             } else {
                 log.info("Registering {}", a);
                 schemaProviders.put(a.getPartialInfo(), a);

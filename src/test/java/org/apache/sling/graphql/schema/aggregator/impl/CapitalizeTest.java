@@ -18,19 +18,19 @@
  */
 package org.apache.sling.graphql.schema.aggregator.impl;
 
-import static org.junit.Assert.assertEquals;
-
 import org.apache.sling.graphql.schema.aggregator.impl.Partial.SectionName;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 public class CapitalizeTest {
     @Test
     public void normalValue() throws Exception {
         assertEquals("Partial", DefaultSchemaAggregator.capitalize(SectionName.PARTIAL));
-   }
+    }
 
-   @Test
-   public void emptyValue() throws Exception {
-       assertEquals(null, DefaultSchemaAggregator.capitalize(null));
-  }
+    @Test
+    public void emptyValue() throws Exception {
+        assertEquals(null, DefaultSchemaAggregator.capitalize(null));
+    }
 }
