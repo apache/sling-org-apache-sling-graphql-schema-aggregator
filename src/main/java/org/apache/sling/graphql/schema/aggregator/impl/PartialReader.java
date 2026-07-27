@@ -89,7 +89,7 @@ public class PartialReader implements Partial {
         public Reader getContent() throws IOException {
             final Reader r = sectionSource.get();
             skipFully(r, startCharIndex);
-            return new BoundedContentReader(r, endCharIndex - startCharIndex);
+            return new BoundedContentReader(r, (long) endCharIndex - startCharIndex);
         }
 
         /** Skips exactly {@code count} characters from {@code r}. Reader.skip() is allowed to
