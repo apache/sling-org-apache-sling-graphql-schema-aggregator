@@ -35,7 +35,6 @@ import java.util.regex.Pattern;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.input.BoundedReader;
 import org.jetbrains.annotations.NotNull;
 
 /** Reader for the partials format, which parses a partial file and
@@ -90,7 +89,7 @@ public class PartialReader implements Partial {
         public Reader getContent() throws IOException {
             final Reader r = sectionSource.get();
             skipFully(r, startCharIndex);
-            return new BoundedReader(r, endCharIndex - startCharIndex);
+            return new BoundedContentReader(r, endCharIndex - startCharIndex);
         }
 
         /** Skips exactly {@code count} characters from {@code r}. Reader.skip() is allowed to
@@ -109,6 +108,42 @@ public class PartialReader implements Partial {
                     remaining--;
                 }
             }
+        }
+    }
+
+    /** Bounds reads to at most {@code maxChars} characters.
+     *  commons-io's BoundedReader stopped enforcing this bound on its read(char[]) overload
+     *  in 2.22.0 (only read() and read(char[],int,int) got the fix) - IOUtils.copy() reads
+     *  through exactly that overload, so a section's content would run straight into the
+     *  next one. Extending Reader directly, instead of commons-io's ProxyReader, means the
+     *  JDK's own default read()/read(char[]) delegate to read(char[],int,int) below, so
+     *  every overload stays bounded no matter which commons-io version is on the classpath.
+     */
+    private static final class BoundedContentReader extends Reader {
+        private final Reader target;
+        private long remaining;
+
+        BoundedContentReader(Reader target, long maxChars) {
+            this.target = target;
+            this.remaining = maxChars;
+        }
+
+        @Override
+        public int read(char[] cbuf, int off, int len) throws IOException {
+            if (remaining <= 0) {
+                return -1;
+            }
+            final int toRead = (int) Math.min(len, remaining);
+            final int n = target.read(cbuf, off, toRead);
+            if (n > 0) {
+                remaining -= n;
+            }
+            return n;
+        }
+
+        @Override
+        public void close() throws IOException {
+            target.close();
         }
     }
 
