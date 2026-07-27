@@ -1,21 +1,21 @@
-/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- ~ Licensed to the Apache Software Foundation (ASF) under one
- ~ or more contributor license agreements.  See the NOTICE file
- ~ distributed with this work for additional information
- ~ regarding copyright ownership.  The ASF licenses this file
- ~ to you under the Apache License, Version 2.0 (the
- ~ "License"); you may not use this file except in compliance
- ~ with the License.  You may obtain a copy of the License at
- ~
- ~   http://www.apache.org/licenses/LICENSE-2.0
- ~
- ~ Unless required by applicable law or agreed to in writing,
- ~ software distributed under the License is distributed on an
- ~ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- ~ KIND, either express or implied.  See the License for the
- ~ specific language governing permissions and limitations
- ~ under the License.
- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package org.apache.sling.graphql.schema.aggregator.impl;
 
 import java.net.URL;
@@ -44,15 +44,14 @@ public final class PartialInfo implements Comparable<PartialInfo> {
     public static final int PARTIAL_NAME_GROUP = 1;
     public static final int PARTIAL_VERSION_GROUP = 3;
 
-
     private final String name;
     private final Version version;
 
     public static final PartialInfo EMPTY = new PartialInfo("", Version.emptyVersion);
 
     PartialInfo(@NotNull String name, @NotNull Version version) {
-        this.name = name;
-        this.version = version;
+        this.name = Objects.requireNonNull(name, "name must not be null");
+        this.version = Objects.requireNonNull(version, "version must not be null");
     }
 
     /**
@@ -147,8 +146,8 @@ public final class PartialInfo implements Comparable<PartialInfo> {
     public static @NotNull PartialInfo fromFileName(@NotNull String fileName) {
         Matcher matcher = PARTIAL_FILE_NAME_PATTERN.matcher(fileName);
         if (matcher.matches()) {
-            return new PartialInfo(matcher.group(PARTIAL_NAME_GROUP),
-                    Version.parseVersion(matcher.group(PARTIAL_VERSION_GROUP)));
+            return new PartialInfo(
+                    matcher.group(PARTIAL_NAME_GROUP), Version.parseVersion(matcher.group(PARTIAL_VERSION_GROUP)));
         }
         return PartialInfo.EMPTY;
     }
@@ -165,7 +164,8 @@ public final class PartialInfo implements Comparable<PartialInfo> {
             for (String partial : requires.split(",")) {
                 Matcher matcher = PARTIAL_REQUIRE_HEADER_PATTERN.matcher(partial.trim());
                 if (matcher.matches()) {
-                    partialInfos.add(new PartialInfo(matcher.group(PARTIAL_NAME_GROUP),
+                    partialInfos.add(new PartialInfo(
+                            matcher.group(PARTIAL_NAME_GROUP),
                             Version.parseVersion(matcher.group(PARTIAL_VERSION_GROUP))));
                 }
             }
@@ -174,4 +174,3 @@ public final class PartialInfo implements Comparable<PartialInfo> {
         return Collections.emptySet();
     }
 }
-

@@ -20,6 +20,8 @@ package org.apache.sling.graphql.schema.aggregator.impl;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.io.StringReader;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -40,7 +42,7 @@ import org.jetbrains.annotations.NotNull;
  *  provides access to its sections.
  *  See the example.partial.txt and the tests for a description of
  *  the format.
-  */
+ */
 public class PartialReader implements Partial {
     private static final Pattern SECTION_LINE = Pattern.compile("([A-Z]+) *:(.*)");
     private static final int EOL = '\n';
@@ -91,18 +93,35 @@ public class PartialReader implements Partial {
             return new BoundedReader(r, endCharIndex - startCharIndex);
         }
     }
-    
+
     public PartialReader(@NotNull PartialInfo partialInfo, @NotNull Supplier<Reader> source) throws IOException {
         this.partialInfo = partialInfo;
-        parse(source);
-        this.digest = "SHA-256: " + Hex.encodeHexString(
-                DigestUtils.updateDigest(DigestUtils.getSha256Digest(), IOUtils.toByteArray(source.get(), StandardCharsets.UTF_8)).digest());
+        // Normalize line endings to LF regardless of how the file was checked out (e.g. CRLF on
+        // Windows), so parsing, section content and the digest are all consistent across platforms.
+        final Supplier<Reader> normalizedSource = normalizeLineEndings(source);
+        parse(normalizedSource);
+        this.digest = "SHA-256: "
+                + Hex.encodeHexString(DigestUtils.updateDigest(
+                                DigestUtils.getSha256Digest(),
+                                IOUtils.toByteArray(normalizedSource.get(), StandardCharsets.UTF_8))
+                        .digest());
         final Partial.Section requirements = sections.get(SectionName.REQUIRES);
-        if(requirements == null) {
+        if (requirements == null) {
             requiredPartialNames = Collections.emptySet();
         } else {
             requiredPartialNames = PartialInfo.fromRequiresSection(requirements.getDescription());
         }
+    }
+
+    private static Supplier<Reader> normalizeLineEndings(Supplier<Reader> source) {
+        return () -> {
+            try (Reader r = source.get()) {
+                final String raw = IOUtils.toString(r);
+                return new StringReader(raw.replace("\r\n", "\n").replace('\r', '\n'));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        };
     }
 
     /* Detect lines that start with a <SECTION>: name
@@ -116,12 +135,17 @@ public class PartialReader implements Partial {
         int lastSectionStart = 0;
         String sectionName = null;
         String sectionDescription = "";
-        while((c = input.read()) != -1) {
-            if(c == EOL) {
+        while ((c = input.read()) != -1) {
+            if (c == EOL) {
                 final Matcher m = SECTION_LINE.matcher(line);
-                if(m.matches()) {
+                if (m.matches()) {
                     // Add previous section
-                    addSectionIfNameIsSet(source, toSectionName(sectionName), sectionDescription, lastSectionStart, charCount - line.length());
+                    addSectionIfNameIsSet(
+                            source,
+                            toSectionName(sectionName),
+                            sectionDescription,
+                            lastSectionStart,
+                            charCount - line.length());
                     // And setup for the new section
                     sectionName = m.group(1).trim();
                     sectionDescription = m.group(2).trim();
@@ -129,38 +153,40 @@ public class PartialReader implements Partial {
                 }
                 line = new StringBuilder();
             } else {
-                line.append((char)c);
+                line.append((char) c);
             }
             charCount++;
         }
 
         // Add last section
-        addSectionIfNameIsSet(source, toSectionName(sectionName), sectionDescription, lastSectionStart, Integer.MAX_VALUE);
+        addSectionIfNameIsSet(
+                source, toSectionName(sectionName), sectionDescription, lastSectionStart, Integer.MAX_VALUE);
 
         // And validate
-        if(!sections.containsKey(SectionName.PARTIAL)) {
+        if (!sections.containsKey(SectionName.PARTIAL)) {
             throw new SyntaxException(String.format("Missing required %s section", PARTIAL_SECTION));
         }
-        
     }
 
-    private void addSectionIfNameIsSet(Supplier<Reader> sectionSource, SectionName name, String description, int start, int end) throws SyntaxException {
-        if(name == null) {
+    private void addSectionIfNameIsSet(
+            Supplier<Reader> sectionSource, SectionName name, String description, int start, int end)
+            throws SyntaxException {
+        if (name == null) {
             return;
         }
-        if(sections.containsKey(name)) {
+        if (sections.containsKey(name)) {
             throw new SyntaxException(String.format("Duplicate section '%s'", name));
         }
         sections.put(name, new ParsedSection(sectionSource, name, description, start, end));
     }
 
     private SectionName toSectionName(String str) throws SyntaxException {
-        if(str == null) {
+        if (str == null) {
             return null;
         }
         try {
             return SectionName.valueOf(str);
-        } catch(Exception e) {
+        } catch (Exception e) {
             throw new SyntaxException(String.format("Invalid section name '%s'", str));
         }
     }

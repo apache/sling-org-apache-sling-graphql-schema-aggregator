@@ -25,16 +25,15 @@ import java.lang.reflect.Field;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import graphql.language.TypeDefinition;
+import graphql.schema.idl.SchemaParser;
+import graphql.schema.idl.TypeDefinitionRegistry;
 import org.apache.commons.io.IOUtils;
 import org.apache.sling.graphql.schema.aggregator.U;
 import org.junit.Before;
 import org.junit.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-
-import graphql.language.TypeDefinition;
-import graphql.schema.idl.SchemaParser;
-import graphql.schema.idl.TypeDefinitionRegistry;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -49,9 +48,15 @@ public class DefaultSchemaAggregatorTest {
     private BundleContext bundleContext;
 
     private void assertOutput(String expectedResourceName, String actual) throws IOException {
-        try(InputStream is = getClass().getResourceAsStream(expectedResourceName)) {
+        try (InputStream is = getClass().getResourceAsStream(expectedResourceName)) {
             assertNotNull("Expecting classpath resource to be present:" + expectedResourceName, is);
-            final String expected = IOUtils.toString(is, "UTF-8").trim();
+            // Normalize line endings: the fixture is compared to output built from
+            // PartialReader, which always normalizes to LF, so the fixture's line
+            // endings must not depend on how it was checked out (e.g. CRLF on Windows).
+            final String expected = IOUtils.toString(is, "UTF-8")
+                    .replace("\r\n", "\n")
+                    .replace('\r', '\n')
+                    .trim();
             assertEquals(expected, actual);
         }
     }
@@ -69,7 +74,9 @@ public class DefaultSchemaAggregatorTest {
     }
 
     private void assertContainsIgnoreCase(String substring, String source) {
-        assertTrue("Expecting '" + substring + "' in source string ", source.toLowerCase().contains(substring.toLowerCase()));
+        assertTrue(
+                "Expecting '" + substring + "' in source string ",
+                source.toLowerCase().contains(substring.toLowerCase()));
     }
 
     @Test
@@ -83,9 +90,10 @@ public class DefaultSchemaAggregatorTest {
     }
 
     @Test
-    public void severalProviders() throws Exception{
+    public void severalProviders() throws Exception {
         final StringWriter target = new StringWriter();
-        tracker.addingBundle(U.mockProviderBundle(bundleContext, "A", 1, "a1.txt", "a2.z.w.txt", "a3abc.txt", "a4abc.txt"), null);
+        tracker.addingBundle(
+                U.mockProviderBundle(bundleContext, "A", 1, "a1.txt", "a2.z.w.txt", "a3abc.txt", "a4abc.txt"), null);
         tracker.addingBundle(U.mockProviderBundle(bundleContext, "B", 2, "b1a.txt", "b2.xy.txt"), null);
         dsa.aggregate(target, "b1a", "b2.xy", "a2.z.w");
         final String sdl = target.toString().trim();
@@ -96,7 +104,9 @@ public class DefaultSchemaAggregatorTest {
     @Test
     public void regexpSelection() throws Exception {
         final StringWriter target = new StringWriter();
-        tracker.addingBundle(U.mockProviderBundle(bundleContext, "A", 1, "a.authoring.1.txt", "a.authoring.2.txt", "a.txt", "b.txt"), null);
+        tracker.addingBundle(
+                U.mockProviderBundle(bundleContext, "A", 1, "a.authoring.1.txt", "a.authoring.2.txt", "a.txt", "b.txt"),
+                null);
         tracker.addingBundle(U.mockProviderBundle(bundleContext, "B", 2, "b1.txt", "b.authoring.txt"), null);
         dsa.aggregate(target, "b1", "/.*\\.authoring.*/");
         assertContainsIgnoreCase("schema aggregated by DefaultSchemaAggregator", target.toString());
@@ -106,7 +116,8 @@ public class DefaultSchemaAggregatorTest {
     @Test
     public void verifyResultSyntax() throws Exception {
         final StringWriter target = new StringWriter();
-        tracker.addingBundle(U.mockProviderBundle(bundleContext, "SDL", 1, "a.sdl.txt", "b.sdl.txt", "c.sdl.txt"), null);
+        tracker.addingBundle(
+                U.mockProviderBundle(bundleContext, "SDL", 1, "a.sdl.txt", "b.sdl.txt", "c.sdl.txt"), null);
 
         dsa.aggregate(target, "/.*/");
 
@@ -118,7 +129,7 @@ public class DefaultSchemaAggregatorTest {
         assertTrue(reg.getDirectiveDefinition("fetcher").isPresent());
         assertTrue(reg.getType("SlingResourceConnection").isPresent());
         assertTrue(reg.getType("PageInfo").isPresent());
-        
+
         final Optional<TypeDefinition> query = reg.getType("Query");
         assertTrue("Expecting Query", query.isPresent());
         assertTrue(query.get().getChildren().toString().contains("oneSchemaResource"));
@@ -144,7 +155,7 @@ public class DefaultSchemaAggregatorTest {
 
         // And make sure it contains what we expect
         assertTrue(reg.getDirectiveDefinition("fetcher").isPresent());
-        
+
         final Optional<TypeDefinition> mutation = reg.getType("Mutation");
         assertTrue("Expecting Mutation", mutation.isPresent());
         assertTrue(mutation.get().getChildren().toString().contains("theOnlyMutation"));
@@ -159,19 +170,16 @@ public class DefaultSchemaAggregatorTest {
     @Test
     public void requires() throws Exception {
         final StringWriter target = new StringWriter();
-        tracker.addingBundle(U.mockProviderBundle(bundleContext, "SDL", 1, "a.sdl.txt", "b.sdl.txt", "c.sdl.txt"), null);
+        tracker.addingBundle(
+                U.mockProviderBundle(bundleContext, "SDL", 1, "a.sdl.txt", "b.sdl.txt", "c.sdl.txt"), null);
         dsa.aggregate(target, "c.sdl");
         final String sdl = target.toString();
 
         // Verify that required partials are included
-        Stream.of(
-            "someMutation",
-            "typeFromB",
-            "typeFromA"
-        ).forEach((s -> {
+        Stream.of("someMutation", "typeFromB", "typeFromA").forEach((s -> {
             assertTrue("Expecting aggregate to contain " + s, sdl.contains(s));
         }));
-   }
+    }
 
     @Test
     public void versionedPartials() throws IOException {
@@ -198,26 +206,37 @@ public class DefaultSchemaAggregatorTest {
         tracker.addingBundle(U.mockProviderBundle(bundleContext, "SDL", 1, "circularA.txt", "circularB.txt"), null);
         final RuntimeException rex = assertThrows(RuntimeException.class, () -> dsa.aggregate(target, "circularA"));
 
-        Stream.of(
-            "requirements cycle",
-            "circularA"
-        ).forEach((s -> {
-            assertTrue(String.format("Expecting message to contain %s: %s",  s, rex.getMessage()), rex.getMessage().contains(s));
+        Stream.of("requirements cycle", "circularA").forEach((s -> {
+            assertTrue(
+                    String.format("Expecting message to contain %s: %s", s, rex.getMessage()),
+                    rex.getMessage().contains(s));
         }));
     }
 
     @Test
     public void providersOrdering() throws Exception {
         final StringWriter target = new StringWriter();
-        tracker.addingBundle(U.mockProviderBundle(bundleContext, "ordering", 1, "aprov.txt", "cprov.txt", "z_test.txt", "a_test.txt",
-                "zprov.txt",
-                "z_test.txt", "bprov.txt", "c_test.txt"), null);
+        tracker.addingBundle(
+                U.mockProviderBundle(
+                        bundleContext,
+                        "ordering",
+                        1,
+                        "aprov.txt",
+                        "cprov.txt",
+                        "z_test.txt",
+                        "a_test.txt",
+                        "zprov.txt",
+                        "z_test.txt",
+                        "bprov.txt",
+                        "c_test.txt"),
+                null);
         dsa.aggregate(target, "aprov", "zprov", "/[a-z]_test/", "a_test", "cprov");
         final String sdl = target.toString();
 
         // The order of named partials is kept, regexp selected ones are ordered by name
         // And A_test has already been used so it's not used again when called explicitly after regexp
-        final String expected = "End of Schema aggregated from {aprov,zprov,a_test,c_test,z_test,cprov} by DefaultSchemaAggregator";
+        final String expected =
+                "End of Schema aggregated from {aprov,zprov,a_test,c_test,z_test,cprov} by DefaultSchemaAggregator";
         assertTrue(String.format("Expecting schema to contain [%s]: %s", expected, sdl), sdl.contains(expected));
-   }
+    }
 }

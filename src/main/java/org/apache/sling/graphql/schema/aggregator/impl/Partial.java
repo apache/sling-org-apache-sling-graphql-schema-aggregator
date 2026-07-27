@@ -29,12 +29,14 @@ import org.jetbrains.annotations.NotNull;
  *  provides access to its sections.
  *  See the example.partial.txt and the tests for a description of
  *  the format.
-  */
+ */
 public interface Partial {
     /** A section in the partial */
     interface Section {
         SectionName getName();
+
         String getDescription();
+
         Reader getContent() throws IOException;
     }
 
@@ -52,13 +54,16 @@ public interface Partial {
      *
      * @return the partial info
      */
-    @NotNull PartialInfo getPartialInfo();
+    @NotNull
+    PartialInfo getPartialInfo();
 
     /** Return a specific section of the partial, by name */
-    @NotNull Optional<Section> getSection(SectionName name);
+    @NotNull
+    Optional<Section> getSection(SectionName name);
 
     /** Names of the Partials on which this one depends */
-    @NotNull Set<PartialInfo> getRequiredPartialNames();
+    @NotNull
+    Set<PartialInfo> getRequiredPartialNames();
 
     /**
      * <p>
@@ -76,6 +81,6 @@ public interface Partial {
      * </p>
      * @return the digest of the source that was used to build this partial
      */
-    @NotNull String getDigest();
-
+    @NotNull
+    String getDigest();
 }

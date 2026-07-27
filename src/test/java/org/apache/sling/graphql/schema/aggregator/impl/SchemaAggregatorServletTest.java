@@ -18,6 +18,9 @@
  */
 package org.apache.sling.graphql.schema.aggregator.impl;
 
+import java.lang.reflect.Field;
+import java.util.Map;
+
 import org.apache.sling.graphql.schema.aggregator.servlet.SchemaAggregatorServlet;
 import org.junit.Test;
 
@@ -26,13 +29,10 @@ import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.lang.reflect.Field;
-import java.util.Map;
-
 public class SchemaAggregatorServletTest {
 
     private void assertMappings(Map<String, String[]> data, String selector, String expected) {
-        final String [] names = data.get(selector);
+        final String[] names = data.get(selector);
         assertNotNull("Expecting field names for selector " + selector, names);
         assertEquals(expected, String.join(",", names));
     }
@@ -42,15 +42,12 @@ public class SchemaAggregatorServletTest {
     public void selectorMappingConfig() throws Exception {
         final SchemaAggregatorServlet s = new SchemaAggregatorServlet();
         final SchemaAggregatorServlet.Config cfg = mock(SchemaAggregatorServlet.Config.class);
-        final String [] cfgMappings = {
-            "\t S1\t :one, two,   \t three  \t",
-            "selector_2:4,5"
-        };
+        final String[] cfgMappings = {"\t S1\t :one, two,   \t three  \t", "selector_2:4,5"};
         when(cfg.selectors_to_partials_mapping()).thenReturn(cfgMappings);
         s.activate(null, cfg);
         final Field f = s.getClass().getDeclaredField("selectorsToPartialNames");
         f.setAccessible(true);
-        final Map<String, String[]> actualMappings = (Map<String, String[]>)f.get(s);
+        final Map<String, String[]> actualMappings = (Map<String, String[]>) f.get(s);
         assertEquals(2, actualMappings.size());
         assertMappings(actualMappings, "S1", "one,two,three");
         assertMappings(actualMappings, "selector_2", "4,5");

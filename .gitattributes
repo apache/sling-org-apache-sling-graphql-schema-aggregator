@@ -1,0 +1,5 @@
+# Auto detect text files and normalize line endings to LF on checkout.
+# The test fixtures under src/test/resources/partials rely on exact
+# line-based parsing (see PartialReader); CRLF checkouts on Windows
+# break that parsing and the fixture comparisons in the tests.
+* text=auto eol=lf

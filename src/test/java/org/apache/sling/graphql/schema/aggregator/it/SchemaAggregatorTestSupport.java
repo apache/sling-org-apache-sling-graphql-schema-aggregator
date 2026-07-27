@@ -18,6 +18,8 @@
  */
 package org.apache.sling.graphql.schema.aggregator.it;
 
+import javax.inject.Inject;
+
 import java.io.Reader;
 import java.time.Duration;
 import java.time.Instant;
@@ -25,14 +27,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.inject.Inject;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.engine.SlingRequestProcessor;
 import org.apache.sling.servlethelpers.MockSlingHttpServletResponse;
 import org.apache.sling.servlethelpers.internalrequests.SlingInternalRequest;
+import org.apache.sling.testing.paxexam.SlingOptions;
 import org.apache.sling.testing.paxexam.TestSupport;
 import org.junit.Before;
 import org.ops4j.pax.exam.Option;
@@ -48,13 +49,14 @@ import static org.junit.Assert.fail;
 import static org.ops4j.pax.exam.CoreOptions.composite;
 import static org.ops4j.pax.exam.CoreOptions.junitBundles;
 import static org.ops4j.pax.exam.CoreOptions.mavenBundle;
+import static org.ops4j.pax.exam.CoreOptions.systemProperty;
 import static org.ops4j.pax.exam.CoreOptions.when;
 import static org.ops4j.pax.exam.cm.ConfigurationAdminOptions.newConfiguration;
 
 public abstract class SchemaAggregatorTestSupport extends TestSupport {
 
     private final Logger log = LoggerFactory.getLogger(getClass().getName());
-    private final static int STARTUP_WAIT_SECONDS = 30;
+    private static final int STARTUP_WAIT_SECONDS = 30;
 
     @Inject
     protected ResourceResolverFactory resourceResolverFactory;
@@ -75,30 +77,47 @@ public abstract class SchemaAggregatorTestSupport extends TestSupport {
             jacocoCommand = new VMOption(jacocoOpt);
         }
 
+        // the quickstart's default org.apache.felix.http.jetty (5.0.0) fails to start under JDK 21 with
+        // "Unsupported class file major version 65" (its bundled ASM version can't parse Java 21 bytecode);
+        // pin it back and bump ASM, matching the fix already validated in sling-org-apache-sling-graphql-core
+        SlingOptions.versionResolver.setVersion("org.apache.felix", "org.apache.felix.http.jetty", "4.2.0");
+        SlingOptions.versionResolver.setVersion("org.apache.felix", "org.apache.felix.http.servlet-api", "2.0.0");
+        SlingOptions.versionResolver.setVersion("org.ow2.asm", "asm", "9.7.1");
+        SlingOptions.versionResolver.setVersion("org.ow2.asm", "asm-analysis", "9.7.1");
+        SlingOptions.versionResolver.setVersion("org.ow2.asm", "asm-commons", "9.7.1");
+        SlingOptions.versionResolver.setVersion("org.ow2.asm", "asm-tree", "9.7.1");
+        SlingOptions.versionResolver.setVersion("org.ow2.asm", "asm-util", "9.7.1");
+
         return composite(
-            when(vmOption != null).useOptions(vmOption),
-            when(jacocoCommand != null).useOptions(jacocoCommand),
-            super.baseConfiguration(),
-            slingQuickstart(),
-            testBundle("bundle.filename"),
-            newConfiguration("org.apache.sling.jcr.base.internal.LoginAdminWhitelist")
-                .put("whitelist.bundles.regexp", "^PAXEXAM.*$")
-                .asOption(),
-            mavenBundle().groupId("org.apache.sling").artifactId("org.apache.sling.servlet-helpers").versionAsInProject(),
-            mavenBundle().groupId("commons-codec").artifactId("commons-codec").versionAsInProject(),
-            junitBundles()
-        );
+                when(vmOption != null).useOptions(vmOption),
+                when(jacocoCommand != null).useOptions(jacocoCommand),
+                // pax-exam's default service-lookup timeout (10s, see
+                // org.ops4j.pax.swissbox.tracker.ServiceLookup.DEFAULT_TIMEOUT, read via the
+                // "pax.exam.service.timeout" system property by ServiceInjector) is too short for the Sling
+                // quickstart to publish its services on slower CI agents (observed on Windows + JDK 21)
+                systemProperty("pax.exam.service.timeout").value("60000"),
+                super.baseConfiguration(),
+                slingQuickstart(),
+                testBundle("bundle.filename"),
+                newConfiguration("org.apache.sling.jcr.base.internal.LoginAdminWhitelist")
+                        .put("whitelist.bundles.regexp", "^PAXEXAM.*$")
+                        .asOption(),
+                mavenBundle()
+                        .groupId("org.apache.sling")
+                        .artifactId("org.apache.sling.servlet-helpers")
+                        .versionAsInProject(),
+                mavenBundle()
+                        .groupId("commons-codec")
+                        .artifactId("commons-codec")
+                        .versionAsInProject(),
+                junitBundles());
     }
 
     private Option slingQuickstart() {
         final int httpPort = findFreePort();
         log.info("Using HTTP port {}", httpPort);
         final String workingDirectory = workingDirectory();
-        return composite(
-            slingQuickstartOakTar(workingDirectory, httpPort),
-            slingScripting(),
-            slingScriptingJsp()
-        );
+        return composite(slingQuickstartOakTar(workingDirectory, httpPort), slingScripting(), slingScriptingJsp());
     }
 
     /**
@@ -111,7 +130,7 @@ public abstract class SchemaAggregatorTestSupport extends TestSupport {
         final String path = "/.json";
         final Instant endTime = Instant.now().plus(Duration.ofSeconds(STARTUP_WAIT_SECONDS));
 
-        while(Instant.now().isBefore(endTime)) {
+        while (Instant.now().isBefore(endTime)) {
             final int status = executeRequest("GET", path, null, null, null, -1).getStatus();
             statuses.add(status);
             if (status == expectedStatus) {
@@ -123,26 +142,29 @@ public abstract class SchemaAggregatorTestSupport extends TestSupport {
         fail("Did not get a " + expectedStatus + " status at " + path + " got " + statuses);
     }
 
-    protected MockSlingHttpServletResponse executeRequest(final String method, 
-        final String path, Map<String, Object> params, String contentType, 
-        Reader body, final int expectedStatus) throws Exception {
+    protected MockSlingHttpServletResponse executeRequest(
+            final String method,
+            final String path,
+            Map<String, Object> params,
+            String contentType,
+            Reader body,
+            final int expectedStatus)
+            throws Exception {
 
-        // Admin resolver is fine for testing    
-        @SuppressWarnings("deprecation")            
+        // Admin resolver is fine for testing
+        @SuppressWarnings("deprecation")
         final ResourceResolver resourceResolver = resourceResolverFactory.getAdministrativeResourceResolver(null);
 
-        final int [] statusParam = expectedStatus == -1 ? null : new int[] { expectedStatus };
+        final int[] statusParam = expectedStatus == -1 ? null : new int[] {expectedStatus};
 
-        return (MockSlingHttpServletResponse)
-            new SlingInternalRequest(resourceResolver, requestProcessor, path)
-            .withRequestMethod(method)
-            .withParameters(params)
-            .withContentType(contentType)
-            .withBody(body)
-            .execute()
-            .checkStatus(statusParam)
-            .getResponse()
-            ;
+        return (MockSlingHttpServletResponse) new SlingInternalRequest(resourceResolver, requestProcessor, path)
+                .withRequestMethod(method)
+                .withParameters(params)
+                .withContentType(contentType)
+                .withBody(body)
+                .execute()
+                .checkStatus(statusParam)
+                .getResponse();
     }
 
     protected String getContent(String path) throws Exception {
