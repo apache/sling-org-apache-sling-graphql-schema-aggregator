@@ -50,8 +50,8 @@ public final class PartialInfo implements Comparable<PartialInfo> {
     public static final PartialInfo EMPTY = new PartialInfo("", Version.emptyVersion);
 
     PartialInfo(@NotNull String name, @NotNull Version version) {
-        this.name = name;
-        this.version = version;
+        this.name = Objects.requireNonNull(name, "name must not be null");
+        this.version = Objects.requireNonNull(version, "version must not be null");
     }
 
     /**

@@ -70,7 +70,7 @@ public class DefaultSchemaAggregator implements SchemaAggregator {
     private void copySection(Set<Partial> selected, Partial.SectionName sectionName, OutputMode mode, Writer target)
             throws IOException {
         String prefixToWrite =
-                (mode == OutputMode.NO_BLOCK) ? null : String.format("%ntype %s {%n", capitalize(sectionName));
+                (mode == OutputMode.NO_BLOCK) ? null : String.format("\ntype %s {\n", capitalize(sectionName));
         boolean anyOutput = false;
         for (Partial p : selected) {
             final Optional<Partial.Section> section = p.getSection(sectionName);
@@ -88,18 +88,18 @@ public class DefaultSchemaAggregator implements SchemaAggregator {
             }
         }
         if ((anyOutput && mode == OutputMode.WITH_BLOCK_IF_NOT_EMPTY) || mode == OutputMode.WITH_BLOCK) {
-            target.write(String.format("%n}%n"));
+            target.write(String.format("\n}\n"));
         }
     }
 
     private void writeSourceInfo(Writer target, Partial p) throws IOException {
-        target.write(String.format("%n# %s.source=%s%n", getClass().getSimpleName(), p.getPartialInfo()));
+        target.write(String.format("\n# %s.source=%s\n", getClass().getSimpleName(), p.getPartialInfo()));
     }
 
     @Override
     public void aggregate(Writer target, String... providerNamesOrRegexp) throws IOException {
         final String info =
-                String.format("Schema aggregated by %s%n", getClass().getSimpleName());
+                String.format("Schema aggregated by %s\n", getClass().getSimpleName());
         target.write(String.format("# %s", info));
 
         // build list of selected providers
@@ -132,7 +132,7 @@ public class DefaultSchemaAggregator implements SchemaAggregator {
             partialNames.append(p.getPartialInfo());
         });
         target.write(String.format(
-                "%n# End of Schema aggregated from {%s} by %s",
+                "\n# End of Schema aggregated from {%s} by %s",
                 partialNames, getClass().getSimpleName()));
     }
 

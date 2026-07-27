@@ -20,6 +20,8 @@ package org.apache.sling.graphql.schema.aggregator.impl;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.io.StringReader;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -94,11 +96,14 @@ public class PartialReader implements Partial {
 
     public PartialReader(@NotNull PartialInfo partialInfo, @NotNull Supplier<Reader> source) throws IOException {
         this.partialInfo = partialInfo;
-        parse(source);
+        // Normalize line endings to LF regardless of how the file was checked out (e.g. CRLF on
+        // Windows), so parsing, section content and the digest are all consistent across platforms.
+        final Supplier<Reader> normalizedSource = normalizeLineEndings(source);
+        parse(normalizedSource);
         this.digest = "SHA-256: "
                 + Hex.encodeHexString(DigestUtils.updateDigest(
                                 DigestUtils.getSha256Digest(),
-                                IOUtils.toByteArray(source.get(), StandardCharsets.UTF_8))
+                                IOUtils.toByteArray(normalizedSource.get(), StandardCharsets.UTF_8))
                         .digest());
         final Partial.Section requirements = sections.get(SectionName.REQUIRES);
         if (requirements == null) {
@@ -106,6 +111,17 @@ public class PartialReader implements Partial {
         } else {
             requiredPartialNames = PartialInfo.fromRequiresSection(requirements.getDescription());
         }
+    }
+
+    private static Supplier<Reader> normalizeLineEndings(Supplier<Reader> source) {
+        return () -> {
+            try (Reader r = source.get()) {
+                final String raw = IOUtils.toString(r);
+                return new StringReader(raw.replace("\r\n", "\n").replace('\r', '\n'));
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        };
     }
 
     /* Detect lines that start with a <SECTION>: name

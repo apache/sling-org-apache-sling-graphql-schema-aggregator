@@ -50,7 +50,13 @@ public class DefaultSchemaAggregatorTest {
     private void assertOutput(String expectedResourceName, String actual) throws IOException {
         try (InputStream is = getClass().getResourceAsStream(expectedResourceName)) {
             assertNotNull("Expecting classpath resource to be present:" + expectedResourceName, is);
-            final String expected = IOUtils.toString(is, "UTF-8").trim();
+            // Normalize line endings: the fixture is compared to output built from
+            // PartialReader, which always normalizes to LF, so the fixture's line
+            // endings must not depend on how it was checked out (e.g. CRLF on Windows).
+            final String expected = IOUtils.toString(is, "UTF-8")
+                    .replace("\r\n", "\n")
+                    .replace('\r', '\n')
+                    .trim();
             assertEquals(expected, actual);
         }
     }

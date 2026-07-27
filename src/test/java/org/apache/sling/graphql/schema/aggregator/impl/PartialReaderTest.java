@@ -169,4 +169,22 @@ public class PartialReaderTest {
                 getResourceReaderSupplier("/partials/versioned-1.0.0.txt"));
         assertEquals("SHA-256: 703bd06e9d65118c75abe9a7a06f6a2fcdb8a19ef62d994f4cc1be0b34420383", p.getDigest());
     }
+
+    @Test
+    public void testDigestIsSameWithCrlfLineEndings() throws IOException {
+        // Normalize to LF first: the checked-out resource itself may already have CRLF
+        // line endings (e.g. on Windows), and blindly replacing "\n" with "\r\n" on such
+        // content would corrupt it into "\r\r\n" instead of producing a clean CRLF fixture.
+        final String lfContent = IOUtils.toString(getResourceReaderSupplier("/partials/versioned-1.0.0.txt")
+                        .get())
+                .replace("\r\n", "\n")
+                .replace('\r', '\n');
+        final String crlfContent = lfContent.replace("\n", "\r\n");
+        final PartialReader p = new PartialReader(
+                PartialInfo.fromPath(Paths.get("/partials/versioned-1.0.0.txt")), () -> new StringReader(crlfContent));
+        assertEquals(
+                "Expecting the digest to be independent of the source file's line ending style",
+                "SHA-256: 703bd06e9d65118c75abe9a7a06f6a2fcdb8a19ef62d994f4cc1be0b34420383",
+                p.getDigest());
+    }
 }

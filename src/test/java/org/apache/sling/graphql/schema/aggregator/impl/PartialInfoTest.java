@@ -27,6 +27,7 @@ import org.junit.Test;
 import org.osgi.framework.Version;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 public class PartialInfoTest {
@@ -82,5 +83,17 @@ public class PartialInfoTest {
                     || ("a_partial".equals(partialInfo.getName())
                             && Version.parseVersion("1.0.0").equals(partialInfo.getVersion())));
         }
+    }
+
+    @Test
+    public void testCompareToRejectsNull() {
+        PartialInfo partialInfo = PartialInfo.fromFileName("partial-1.0.0.txt");
+        assertThrows(NullPointerException.class, () -> partialInfo.compareTo(null));
+    }
+
+    @Test
+    public void testConstructorRejectsNullFields() {
+        assertThrows(NullPointerException.class, () -> new PartialInfo(null, Version.emptyVersion));
+        assertThrows(NullPointerException.class, () -> new PartialInfo("partial", null));
     }
 }
