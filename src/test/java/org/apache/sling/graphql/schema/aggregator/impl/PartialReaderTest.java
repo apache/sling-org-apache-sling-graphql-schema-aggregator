@@ -18,6 +18,7 @@
  */
 package org.apache.sling.graphql.schema.aggregator.impl;
 
+import java.io.FilterReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -74,6 +75,20 @@ public class PartialReaderTest {
 
     private Supplier<Reader> getStringReaderSupplier(String content) {
         return () -> new StringReader(content);
+    }
+
+    /** Reader wrapper whose skip() always returns 0, as the Reader.skip() contract
+     *  allows, forcing callers to fall back to read()-based skipping.
+     */
+    private static class ZeroSkipReader extends FilterReader {
+        ZeroSkipReader(Reader in) {
+            super(in);
+        }
+
+        @Override
+        public long skip(long n) throws IOException {
+            return 0;
+        }
     }
 
     @Test
@@ -186,5 +201,19 @@ public class PartialReaderTest {
                 "Expecting the digest to be independent of the source file's line ending style",
                 "SHA-256: 703bd06e9d65118c75abe9a7a06f6a2fcdb8a19ef62d994f4cc1be0b34420383",
                 p.getDigest());
+    }
+
+    @Test
+    public void sectionContentSkipsRobustlyWhenReaderSkipReturnsZero() throws IOException {
+        // Exercise PartialReader.ParsedSection directly: PartialReader's own line-ending
+        // normalization always hands ParsedSection a plain StringReader, which happens to
+        // fully honor skip() in one call and would hide this bug.
+        final String content = "0123456789ABCDEF";
+        final Supplier<Reader> zeroSkipSource = () -> new ZeroSkipReader(new StringReader(content));
+        final Partial.Section section =
+                new PartialReader.ParsedSection(zeroSkipSource, SectionName.TYPES, "desc", 5, 10);
+        try (Reader r = section.getContent()) {
+            assertEquals("56789", IOUtils.toString(r));
+        }
     }
 }

@@ -89,8 +89,26 @@ public class PartialReader implements Partial {
         @Override
         public Reader getContent() throws IOException {
             final Reader r = sectionSource.get();
-            r.skip(startCharIndex);
+            skipFully(r, startCharIndex);
             return new BoundedReader(r, endCharIndex - startCharIndex);
+        }
+
+        /** Skips exactly {@code count} characters from {@code r}. Reader.skip() is allowed to
+         *  skip fewer characters than requested in a single call, so we keep skipping (falling
+         *  back to read() when skip() makes no progress) until the count is reached or EOF hits.
+         */
+        private static void skipFully(Reader r, long count) throws IOException {
+            long remaining = count;
+            while (remaining > 0) {
+                final long skipped = r.skip(remaining);
+                if (skipped > 0) {
+                    remaining -= skipped;
+                } else if (r.read() == -1) {
+                    break;
+                } else {
+                    remaining--;
+                }
+            }
         }
     }
 
