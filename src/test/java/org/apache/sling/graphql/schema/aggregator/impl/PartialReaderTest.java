@@ -218,6 +218,18 @@ public class PartialReaderTest {
     }
 
     @Test
+    public void sectionContentStartBeyondEOFReturnsEmpty() throws IOException {
+        // If the requested start index is beyond the source's length, getContent() should
+        // return an empty reader and not throw.
+        final String content = "0123"; // only 4 chars
+        final Supplier<Reader> source = () -> new StringReader(content);
+        final Partial.Section section = new PartialReader.ParsedSection(source, SectionName.TYPES, "desc", 10, 12);
+        try (Reader r = section.getContent()) {
+            assertEquals("", IOUtils.toString(r));
+        }
+    }
+
+    @Test
     public void sectionContentStaysBoundedWhenCopiedViaBulkReadCharArray() throws IOException {
         // IOUtils.copy() reads through read(char[]) - the exact overload commons-io's
         // BoundedReader stopped bounding in 2.22.0. Section is much shorter than its source,

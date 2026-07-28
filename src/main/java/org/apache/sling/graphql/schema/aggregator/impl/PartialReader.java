@@ -92,20 +92,39 @@ public class PartialReader implements Partial {
             return new BoundedContentReader(r, (long) endCharIndex - startCharIndex);
         }
 
-        /** Skips exactly {@code count} characters from {@code r}. Reader.skip() is allowed to
-         *  skip fewer characters than requested in a single call, so we keep skipping (falling
-         *  back to read() when skip() makes no progress) until the count is reached or EOF hits.
+        /**
+         * Skips up to {@code count} characters from {@code r}.
+         *
+         * This uses Reader.skip() repeatedly. If skip() makes no progress the method falls back
+         * to reading into a temporary buffer (up to 8 KiB) to advance in bulk instead of
+         * degrading to single-character reads. That avoids very slow behavior when skip()
+         * consistently returns 0.
+         *
+         * If EOF is reached before the requested number of characters is skipped the method
+         * returns normally after consuming available input; it does not throw. Callers that
+         * require a strict guarantee that the requested start exists should validate the source
+         * or check the reader state after this call.
          */
         private static void skipFully(Reader r, long count) throws IOException {
             long remaining = count;
+            // start with a buffer sized to the remaining amount but never larger than 8 KiB
+            char[] buf = new char[(int) Math.min(8192L, Math.max(1L, remaining))];
             while (remaining > 0) {
                 final long skipped = r.skip(remaining);
                 if (skipped > 0) {
                     remaining -= skipped;
-                } else if (r.read() == -1) {
-                    break;
+                    // shrink buffer if the remaining amount is smaller than current buffer
+                    if (remaining > 0 && buf.length > remaining) {
+                        buf = new char[(int) Math.min(8192L, remaining)];
+                    }
                 } else {
-                    remaining--;
+                    final int toRead = (int) Math.min((long) buf.length, remaining);
+                    final int n = r.read(buf, 0, toRead);
+                    if (n == -1) {
+                        // EOF reached before skipping everything - stop
+                        break;
+                    }
+                    remaining -= n;
                 }
             }
         }
@@ -118,6 +137,13 @@ public class PartialReader implements Partial {
      *  next one. Extending Reader directly, instead of commons-io's ProxyReader, means the
      *  JDK's own default read()/read(char[]) delegate to read(char[],int,int) below, so
      *  every overload stays bounded no matter which commons-io version is on the classpath.
+     *
+     *  Note: when the underlying reader reaches EOF, reads behave normally and return -1.
+     *  This class does not attempt to recover or throw when the section's start offset was
+     *  beyond EOF; callers that need that guarantee should validate the source beforehand.
+     *  For correctness and performance, this class explicitly implements read(char[],int,int)
+     *  so JDK and commons-io bulk read paths stay bounded; read() and read(char[]) will
+     *  delegate to that implementation.
      */
     private static final class BoundedContentReader extends Reader {
         private final Reader target;
