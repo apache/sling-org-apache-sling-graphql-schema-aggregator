@@ -89,7 +89,7 @@ public class PartialReader implements Partial {
         public Reader getContent() throws IOException {
             final Reader r = sectionSource.get();
             skipFully(r, startCharIndex);
-            return new BoundedContentReader(r, (long) endCharIndex - startCharIndex);
+            return new BoundedContentReader(r, endCharIndex - startCharIndex);
         }
 
         /**
@@ -105,20 +105,20 @@ public class PartialReader implements Partial {
          * require a strict guarantee that the requested start exists should validate the source
          * or check the reader state after this call.
          */
-        private static void skipFully(Reader r, long count) throws IOException {
-            long remaining = count;
+        private static void skipFully(Reader r, int count) throws IOException {
+            int remaining = count;
             // start with a buffer sized to the remaining amount but never larger than 8 KiB
-            char[] buf = new char[(int) Math.min(8192L, Math.max(1L, remaining))];
+            char[] buf = new char[Math.max(1, Math.min(8192, remaining))];
             while (remaining > 0) {
                 final long skipped = r.skip(remaining);
                 if (skipped > 0) {
-                    remaining -= skipped;
+                    remaining -= (int) skipped;
                     // shrink buffer if the remaining amount is smaller than current buffer
                     if (remaining > 0 && buf.length > remaining) {
-                        buf = new char[(int) Math.min(8192L, remaining)];
+                        buf = new char[Math.min(8192, remaining)];
                     }
                 } else {
-                    final int toRead = (int) Math.min((long) buf.length, remaining);
+                    final int toRead = Math.min(buf.length, remaining);
                     final int n = r.read(buf, 0, toRead);
                     if (n == -1) {
                         // EOF reached before skipping everything - stop
@@ -147,9 +147,9 @@ public class PartialReader implements Partial {
      */
     private static final class BoundedContentReader extends Reader {
         private final Reader target;
-        private long remaining;
+        private int remaining;
 
-        BoundedContentReader(Reader target, long maxChars) {
+        BoundedContentReader(Reader target, int maxChars) {
             this.target = target;
             this.remaining = maxChars;
         }
@@ -159,7 +159,7 @@ public class PartialReader implements Partial {
             if (remaining <= 0) {
                 return -1;
             }
-            final int toRead = (int) Math.min(len, remaining);
+            final int toRead = Math.min(len, remaining);
             final int n = target.read(cbuf, off, toRead);
             if (n > 0) {
                 remaining -= n;
