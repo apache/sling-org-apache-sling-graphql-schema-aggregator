@@ -35,7 +35,6 @@ import java.util.regex.Pattern;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.input.BoundedReader;
 import org.jetbrains.annotations.NotNull;
 
 /** Reader for the partials format, which parses a partial file and
@@ -89,8 +88,88 @@ public class PartialReader implements Partial {
         @Override
         public Reader getContent() throws IOException {
             final Reader r = sectionSource.get();
-            r.skip(startCharIndex);
-            return new BoundedReader(r, endCharIndex - startCharIndex);
+            skipFully(r, startCharIndex);
+            return new BoundedContentReader(r, endCharIndex - startCharIndex);
+        }
+
+        /**
+         * Skips up to {@code count} characters from {@code r}.
+         *
+         * This uses Reader.skip() repeatedly. If skip() makes no progress the method falls back
+         * to reading into a temporary buffer (up to 8 KiB) to advance in bulk instead of
+         * degrading to single-character reads. That avoids very slow behavior when skip()
+         * consistently returns 0.
+         *
+         * If EOF is reached before the requested number of characters is skipped the method
+         * returns normally after consuming available input; it does not throw. Callers that
+         * require a strict guarantee that the requested start exists should validate the source
+         * or check the reader state after this call.
+         */
+        private static void skipFully(Reader r, int count) throws IOException {
+            int remaining = count;
+            // start with a buffer sized to the remaining amount but never larger than 8 KiB
+            char[] buf = new char[Math.max(1, Math.min(8192, remaining))];
+            while (remaining > 0) {
+                final long skipped = r.skip(remaining);
+                if (skipped > 0) {
+                    remaining -= (int) skipped;
+                    // shrink buffer if the remaining amount is smaller than current buffer
+                    if (remaining > 0 && buf.length > remaining) {
+                        buf = new char[Math.min(8192, remaining)];
+                    }
+                } else {
+                    final int toRead = Math.min(buf.length, remaining);
+                    final int n = r.read(buf, 0, toRead);
+                    if (n == -1) {
+                        // EOF reached before skipping everything - stop
+                        break;
+                    }
+                    remaining -= n;
+                }
+            }
+        }
+    }
+
+    /** Bounds reads to at most {@code maxChars} characters.
+     *  commons-io's BoundedReader stopped enforcing this bound on its read(char[]) overload
+     *  in 2.22.0 (only read() and read(char[],int,int) got the fix) - IOUtils.copy() reads
+     *  through exactly that overload, so a section's content would run straight into the
+     *  next one. Extending Reader directly, instead of commons-io's ProxyReader, means the
+     *  JDK's own default read()/read(char[]) delegate to read(char[],int,int) below, so
+     *  every overload stays bounded no matter which commons-io version is on the classpath.
+     *
+     *  Note: when the underlying reader reaches EOF, reads behave normally and return -1.
+     *  This class does not attempt to recover or throw when the section's start offset was
+     *  beyond EOF; callers that need that guarantee should validate the source beforehand.
+     *  For correctness and performance, this class explicitly implements read(char[],int,int)
+     *  so JDK and commons-io bulk read paths stay bounded; read() and read(char[]) will
+     *  delegate to that implementation.
+     */
+    private static final class BoundedContentReader extends Reader {
+        private final Reader target;
+        private int remaining;
+
+        BoundedContentReader(Reader target, int maxChars) {
+            this.target = target;
+            this.remaining = maxChars;
+        }
+
+        @Override
+        public int read(char[] cbuf, int off, int len) throws IOException {
+            if (remaining <= 0) {
+                return -1;
+            }
+            final int toRead = Math.min(len, remaining);
+            final int n = target.read(cbuf, off, toRead);
+            if (n > 0) {
+                remaining -= n;
+            }
+            return n;
+        }
+
+        @Override
+        public void close() throws IOException {
+            target.close();
         }
     }
 
